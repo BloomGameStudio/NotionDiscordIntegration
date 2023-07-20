@@ -1,0 +1,1 @@
+- remove unneccessary permissions and rights from the notion key / integration https://www.notion.so/my-integrations/internal/18c7ff803f3246009a2e89a056fb2ec2
