@@ -13,6 +13,7 @@ def get_username_by_id(id):
     name = get_user_by_id(id).get("name")
     return name
 
+
 def get_page_title(page):
     _properties = page.get("properties")
     # pprint(f"properties: {_properties}")
@@ -33,6 +34,7 @@ def get_page_title(page):
     # pprint(f"title:{title}")
 
     return title
+
 
 def get_page_plain_text_title(page):
     _properties = page.get("properties")
