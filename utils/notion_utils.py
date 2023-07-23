@@ -33,3 +33,18 @@ def get_page_title(page):
     # pprint(f"title:{title}")
 
     return title
+
+def get_page_plain_text_title(page):
+    _properties = page.get("properties")
+    # pprint(f"properties: {_properties}")
+
+    _Name = _properties.get("Page")
+    # pprint(f"Name:{_Name}")
+
+    _title = _Name.get("title")[0]
+    # pprint(f"_title:{_title}")
+
+    plain_text = _title.get("plain_text")
+    # pprint(f"_plain_text:{_plain_text}")
+
+    return plain_text
