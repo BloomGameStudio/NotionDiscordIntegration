@@ -1,1 +1,2 @@
 COLLECTIVE_DB = "07752fd5ba8e44c7b8e48bfee50f0545?"
+DATE_FMT = "%d %m %Y %H:%M"
