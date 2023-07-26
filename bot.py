@@ -24,12 +24,19 @@ class MyClient(discord.Client):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.info("------")
 
-    async def my_background_task(self):
+    async def notion_updates_notifications(self):
         await self.wait_until_ready()
-        channel = self.get_channel(NOTION_UPDATE_NOTIFICATION_CHANNEL)
+        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
             await handle_updates(channel)
-            await asyncio.sleep(1)  # task runs every x seconds
+            await asyncio.sleep(5)  # task runs every x seconds
+
+    async def notion_creation_notifications(self):
+        await self.wait_until_ready()
+        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
+        while not self.is_closed():
+            await notion.handle_creations(channel)
+            await asyncio.sleep(5)  # task runs every x seconds
 
 
 intents = discord.Intents.default()
