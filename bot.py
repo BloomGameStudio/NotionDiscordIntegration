@@ -11,8 +11,14 @@ class MyClient(discord.Client):
         super().__init__(*args, **kwargs)
 
     async def setup_hook(self) -> None:
-        # create the background task and run it in the background
-        self.bg_tasks = self.loop.create_task(self.my_background_task())
+        # create the background tasks and run it in the background
+        self.notion_creation_task = self.loop.create_task(
+            self.notion_creation_notifications()
+        )
+
+        self.notion_update_task = self.loop.create_task(
+            self.notion_updates_notifications()
+        )
 
     async def on_ready(self):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
