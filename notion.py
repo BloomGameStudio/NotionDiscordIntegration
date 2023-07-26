@@ -15,7 +15,7 @@ db = TinyDB("db.json")
 notion_client = Client(auth=os.environ["NOTION_TOKEN"])
 
 
-async def handle_updates(chan, results=None):
+async def handle_updates(chan):
     logger.debug("Handle Updates")
     # Search all shared Notion databases and pages the bot has access to
     response = notion_client.search()
