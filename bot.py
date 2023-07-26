@@ -1,7 +1,7 @@
 import discord
 import os
 import asyncio
-from notion import handle_updates
+import notion
 from my_logger import logger
 from constants import NOTION_NOTIFICATION_CHANNEL
 
@@ -28,7 +28,7 @@ class MyClient(discord.Client):
         await self.wait_until_ready()
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
-            await handle_updates(channel)
+            await notion.handle_updates(channel)
             await asyncio.sleep(5)  # task runs every x seconds
 
     async def notion_creation_notifications(self):
