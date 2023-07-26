@@ -13,3 +13,16 @@ import textwrap
 # Initialize DB and notion client
 db = TinyDB("db.json")
 notion_client = Client(auth=os.environ["NOTION_TOKEN"])
+
+
+async def handle_updates(chan, results=None):
+    logger.debug("Handle Updates")
+    # Search all shared Notion databases and pages the bot has access to
+    response = notion_client.search()
+    results = response.get("results")
+
+    for result in results:
+        await handle_update(chan, result)
+    return
+
+
