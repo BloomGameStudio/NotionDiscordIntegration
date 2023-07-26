@@ -4,7 +4,7 @@ import asyncio
 from notion import handle_updates
 from my_logger import logger
 
-NOTION_UPDATE_NOTIFICATION_CHANNEL = 1130461410871226368
+NOTION_NOTIFICATION_CHANNEL = 1130461410871226368
 
 
 class MyClient(discord.Client):
