@@ -118,16 +118,11 @@ async def handle_update(chan, result):
         # print(f"Last Edited By: {edited_by_user}")
 
         msg = f"""
-                **__{title} Update__**
-                Edited By: **{edited_by_user}**
-
-                __Update Info__
-
-                Title: {title}
-                URL: {url}
-                Cover: {cover}
-                Last Edited Time: {last_edited_time}
-                Last Edited By: {edited_by_user}
+                📡**__{title} Update__**📡
+                **Title:** {title}
+                **Edited By:** {edited_by_user}
+                **Time:** {last_edited_time}
+                **Link:** {url}
                 """
 
         dedented_msg = textwrap.dedent(msg)
