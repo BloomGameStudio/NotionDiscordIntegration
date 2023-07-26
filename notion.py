@@ -92,3 +92,6 @@ async def handle_update(chan, result):
     # TODO: Prune db
     return
 
+
+if __name__ == "__main__":
+    asyncio.run(handle_updates(1130461410871226368))
