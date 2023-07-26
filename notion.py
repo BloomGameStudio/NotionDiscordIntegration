@@ -23,6 +23,44 @@ async def handle_creations(chan):
     return
 
 
+async def handle_creation(chan, result):
+    # Check for new creations
+    query = Query()
+    # get the db rows that matches the id
+    db_results = db.search(query.id == result.get("id"))
+
+    if len(db_results) > 0:
+        # result already exists in db
+        return
+
+    # We have a creation
+
+    title = notion_utils.get_page_title(result)
+    # pprint(f"title:{title}")
+
+    created_by_user = notion_utils.get_username_by_id(
+        result.get("created_by").get("id")
+    )
+
+    url = result.get("url")
+    cover = result.get("cover", "No Cover Availabe")
+    created_time = parser.parse(result.get("created_time")).strftime("%d.%m.%Y %H:%M")
+
+    msg = f"""
+            🧬 **__New {title}__** 🧬
+            **Created By:** {created_by_user}
+            **Title:** {title}
+            **Time:** {created_time}
+            **Link:** {url}
+            """
+
+    dedented_msg = textwrap.dedent(msg)
+    await chan.send(dedented_msg)
+
+    # Insert new results into
+    db.insert(result)
+    return
+
 async def handle_updates(chan):
     logger.debug("Handle Updates")
     # Search all shared Notion databases and pages the bot has access to
