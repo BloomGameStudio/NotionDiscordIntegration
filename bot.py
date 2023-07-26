@@ -3,6 +3,7 @@ import os
 import asyncio
 from notion import handle_updates
 from my_logger import logger
+from constants import NOTION_NOTIFICATION_CHANNEL
 
 
 class MyClient(discord.Client):
