@@ -82,14 +82,17 @@ async def handle_creation(chan, result):
     db.insert(result)
     return
 
-async def handle_updates(chan):
+
+async def handle_updates(chan, db_lock):
     logger.debug("Handle Updates")
     # Search all shared Notion databases and pages the bot has access to
-    response = notion_client.search()
+    response = await notion_client.search()
     results = response.get("results")
+    # logger.debug(results)
+    logger.debug(f"Results len: {len(results)}")
 
     for result in results:
-        await handle_update(chan, result)
+        await handle_update(chan, result, db_lock)
     return
 
 
