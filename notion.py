@@ -44,11 +44,13 @@ async def handle_creations(chan, db_lock):
     return
 
 
-async def handle_creation(chan, result):
+async def handle_creation(chan, result, db_lock):
     # Check for new creations
     query = Query()
-    # get the db rows that matches the id
-    db_results = db.search(query.id == result.get("id"))
+    async with db_lock:
+        # get the db rows that matches the id
+        db_results = await asyncio.to_thread(db.search, query.id == result.get("id"))
+        # db_results = db.search(query.id == result.get("id"))
 
     if len(db_results) > 0:
         # result already exists in db
@@ -59,7 +61,7 @@ async def handle_creation(chan, result):
     title = notion_utils.get_page_title(result)
     # pprint(f"title:{title}")
 
-    created_by_user = notion_utils.get_username_by_id(
+    created_by_user = await notion_utils.get_username_by_id(
         result.get("created_by").get("id")
     )
 
@@ -78,8 +80,10 @@ async def handle_creation(chan, result):
     dedented_msg = textwrap.dedent(msg)
     await chan.send(dedented_msg)
 
-    # Insert new results into
-    db.insert(result)
+    async with db_lock:
+        # Insert new results into
+        await asyncio.to_thread(db.insert, result)
+        # db.insert(result)
     return
 
 
