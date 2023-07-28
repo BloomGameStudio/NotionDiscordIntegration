@@ -6,8 +6,10 @@ from my_logger import logger
 notion = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
 
-def get_user_by_id(id):
-    user = notion.users.retrieve(id)
+async def get_user_by_id(id):
+    logger.debug("Getting the notion user by id")
+    user = await notion.users.retrieve(id)
+    logger.debug("Returning Notion user by id")
     return user
 
 
