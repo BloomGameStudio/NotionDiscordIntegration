@@ -1,9 +1,9 @@
-from notion_client import Client
+from notion_client import AsyncClient
 import os
 from pprint import pprint
 from my_logger import logger
 
-notion = Client(auth=os.environ["NOTION_TOKEN"])
+notion = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
 
 def get_user_by_id(id):
