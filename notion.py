@@ -1,3 +1,20 @@
+# NOTE:
+# Doing either of the below examples wont work the discord message wont be send
+
+# results = await asyncio.gather(*[handle_update(chan, result) for result in results])
+
+# try:
+#     async with asyncio.TaskGroup() as tg:
+#         try:
+#             for result in results:
+#                 tg.create_task(handle_update(chan, result))
+#         except Exception as e:
+#             logger.error(e)
+#             raise e
+# except Exception as e:
+#     logger.error(e)
+#     raise e
+
 import os
 from notion_client import Client
 import constants
