@@ -1,6 +1,7 @@
 from notion_client import Client
 import os
 from pprint import pprint
+from my_logger import logger
 
 notion = Client(auth=os.environ["NOTION_TOKEN"])
 
