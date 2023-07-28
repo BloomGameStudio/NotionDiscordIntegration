@@ -15,6 +15,7 @@
 #     logger.error(e)
 #     raise e
 
+
 import os
 from notion_client import Client
 import constants
@@ -25,10 +26,13 @@ from utils import notion_utils
 import asyncio
 from my_logger import logger
 import textwrap
-
+from notion_client import AsyncClient
 
 # Initialize DB and notion client
 db = TinyDB("db.json")
+notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
+
+
 async def handle_creations(chan):
     logger.debug("Handle Creation")
     # Search all shared Notion databases and pages the bot has access to
