@@ -37,8 +37,9 @@ class MyClient(discord.Client):
         await self.wait_until_ready()
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
-            await notion.handle_creations(channel)
-            await asyncio.sleep(5)  # task runs every x seconds
+            await notion.handle_creations(channel, self.db_lock)
+            logger.info("Notion Creations handled")
+            await asyncio.sleep(10)  # task runs every x seconds
 
 
 intents = discord.Intents.default()
