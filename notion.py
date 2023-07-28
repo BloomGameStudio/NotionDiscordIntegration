@@ -33,14 +33,14 @@ db = TinyDB("db.json")
 notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
 
-async def handle_creations(chan):
+async def handle_creations(chan, db_lock):
     logger.debug("Handle Creation")
     # Search all shared Notion databases and pages the bot has access to
     response = notion_client.search()
     results = response.get("results")
 
     for result in results:
-        await handle_creation(chan, result)
+        await handle_creation(chan, result, db_lock)
     return
 
 
