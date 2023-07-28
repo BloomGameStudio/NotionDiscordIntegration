@@ -11,6 +11,7 @@ class MyClient(discord.Client):
         super().__init__(*args, **kwargs)
 
     async def setup_hook(self) -> None:
+        self.db_lock = asyncio.Lock()
         # create the background tasks and run it in the background
         self.notion_creation_task = self.loop.create_task(
             self.notion_creation_notifications()
