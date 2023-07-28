@@ -13,8 +13,17 @@ async def get_user_by_id(id):
     return user
 
 
-def get_username_by_id(id):
-    name = get_user_by_id(id).get("name")
+async def get_username_by_id(id):
+    logger.debug("Getting the notion username by id")
+    try:
+        user = await get_user_by_id(id)
+        name = user.get("name")
+    except AttributeError as e:
+        logger.error(f"Error getting the notion username by id: {e}")
+        logger.exception(e)
+        raise e
+
+    logger.debug("Returning Notion username by id")
     return name
 
 
