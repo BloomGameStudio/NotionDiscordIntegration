@@ -12,6 +12,7 @@ class MyClient(discord.Client):
 
     async def setup_hook(self) -> None:
         self.db_lock = asyncio.Lock()
+
         # create the background tasks and run it in the background
         self.notion_creation_task = self.loop.create_task(
             self.notion_creation_notifications()
@@ -35,6 +36,9 @@ class MyClient(discord.Client):
 
     async def notion_creation_notifications(self):
         await self.wait_until_ready()
+
+        await notion.sync_db(self.db_lock)
+
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
             await notion.handle_creations(channel, self.db_lock)
