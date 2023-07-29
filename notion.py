@@ -122,10 +122,10 @@ async def handle_update(chan, result, db_lock):
     # logger.debug(f"DB Results: {db_results}")
 
     if len(db_results) < 1:
-        async with db_lock:
-            # No db Results
-            await asyncio.to_thread(db.insert, result)
-            # db.insert(result)
+        # async with db_lock:
+        #     # No db Results
+        #     await asyncio.to_thread(db.insert, result)
+        #     # db.insert(result)
         return
 
     last_db_result = db_results[-1]
@@ -169,11 +169,12 @@ async def handle_update(chan, result, db_lock):
         await chan.send(dedented_msg)
         logger.debug("Sent Dedented Message to Chan")
 
-    async with db_lock:
-        await asyncio.to_thread(db.insert, result)
-        # db.insert(result)
+        async with db_lock:
+            await asyncio.to_thread(db.insert, result)
+            # db.insert(result)
 
-    # TODO: Prune db
+        # TODO: Prune db
+
     return
 
 
