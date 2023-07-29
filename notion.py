@@ -89,7 +89,7 @@ async def handle_creation(chan, result, db_lock):
     )
 
     url = result.get("url")
-    cover = result.get("cover", "No Cover Availabe")
+    cover = result.get("cover", "No Cover Available")
     created_time = parser.parse(result.get("created_time")).strftime("%d.%m.%Y %H:%M")
 
     msg = f"""
@@ -166,7 +166,7 @@ async def handle_update(chan, result, db_lock):
         logger.debug("Got the notion username of the last edited by")
 
         url = result.get("url")
-        cover = result.get("cover", "No Cover Availabe")
+        cover = result.get("cover", "No Cover Available")
         last_edited_time = parser.parse(result.get("last_edited_time")).strftime(
             "%d.%m.%Y %H:%M"
         )

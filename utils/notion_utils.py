@@ -61,7 +61,7 @@ def get_page_title(page):
     except:
         pass
 
-    return "No Title Availabe"
+    return "No Title Available"
 
 
 def get_page_plain_text_title(page):
