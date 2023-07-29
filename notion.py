@@ -45,16 +45,22 @@ async def handle_creations(chan, db_lock):
 
 
 async def handle_creation(chan, result, db_lock):
+    result_id = result.get("id")
+    logger.debug(f"Handle Creation Result {result_id}")
     # Check for new creations
     query = Query()
+    logger.debug("searching db for existing results")
     async with db_lock:
         # get the db rows that matches the id
         db_results = await asyncio.to_thread(db.search, query.id == result.get("id"))
         # db_results = db.search(query.id == result.get("id"))
 
     if len(db_results) > 0:
+        logger.debug("result already exists in db")
         # result already exists in db
         return
+
+    logger.debug("result does not exist in db")
 
     # We have a creation
 
@@ -84,6 +90,8 @@ async def handle_creation(chan, result, db_lock):
         # Insert new results into
         await asyncio.to_thread(db.insert, result)
         # db.insert(result)
+
+    logger.debug("Sent creation message and Inserted result into db")
     return
 
 
