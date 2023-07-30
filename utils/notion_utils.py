@@ -78,3 +78,27 @@ def get_page_plain_text_title(page):
     # pprint(f"_plain_text:{_plain_text}")
 
     return plain_text
+
+def get_title(document):
+    """
+    Purpose: document
+
+    """
+
+    try:
+        try:
+            get_page_title(document)
+        except AttributeError as e:
+            pass
+        try:
+            get_database_title(document)
+        except AttributeError as e:
+            pass
+
+    except Exception as e:
+        logger.exception(e)
+
+    return "No Title Available"
+
+
+# end def
