@@ -4,7 +4,7 @@ import sys
 logging.basicConfig(
     stream=sys.stdout,
     format="[%(asctime)s] [%(filename)s:%(lineno)d] %(levelname)s - %(message)s",
-    level=logging.DEBUG,
+    level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
