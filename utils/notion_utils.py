@@ -74,7 +74,7 @@ def get_page_plain_text_title(page):
     return plain_text
 
 
-def get_database_title(database):
+def get_database_title(database) -> str:
     """
     Purpose:
     """
@@ -95,11 +95,11 @@ def get_title(document):
 
     try:
         try:
-            get_page_title(document)
+            return get_page_title(document)
         except AttributeError as e:
             pass
         try:
-            get_database_title(document)
+            return get_database_title(document)
         except AttributeError as e:
             pass
 
