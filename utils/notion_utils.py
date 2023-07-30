@@ -79,6 +79,20 @@ def get_page_plain_text_title(page):
 
     return plain_text
 
+
+def get_database_title(database):
+    """
+    Purpose:
+    """
+
+    _title = database.get("title")[0]
+    plain_text = _title.get("plain_text")
+    return plain_text
+
+
+# end def
+
+
 def get_title(document):
     """
     Purpose: document
