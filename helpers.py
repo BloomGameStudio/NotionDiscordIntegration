@@ -1,3 +1,6 @@
+import re
+
+
 def find_nested_dict_key(dictionary, key):
     """
     Finds a key in a dictionary with arbitrary depth of nesting.
@@ -24,3 +27,12 @@ def find_nested_dict_key(dictionary, key):
                         if result is not None:
                             return result
     return None
+
+
+def extract_string_between(text, start, end):
+    pattern = re.escape(start) + "(.*?)" + re.escape(end)
+    match = re.search(pattern, text)
+    if match:
+        return match.group(1)
+    else:
+        return None
