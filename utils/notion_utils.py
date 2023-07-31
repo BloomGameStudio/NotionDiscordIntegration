@@ -87,7 +87,7 @@ def get_database_title(database) -> str:
 # end def
 
 
-def get_title(document):
+def get_title(document: Union[list, dict]) -> str:
     """
     Purpose: document
 
