@@ -92,8 +92,8 @@ def get_database_title(database) -> str:
 
 
 def get_title(document: Union[list, dict]) -> str:
-    """
-    Purpose: document
+    plain_text = find_nested_dict_key(document, "plain_text")
+    return plain_text or "No Title Available"
 
     """
 
