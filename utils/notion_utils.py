@@ -95,22 +95,10 @@ def get_title(document: Union[list, dict]) -> str:
     plain_text = find_nested_dict_key(document, "plain_text")
     return plain_text or "No Title Available"
 
-    """
 
-    try:
-        try:
-            return get_page_title(document)
-        except AttributeError as e:
-            pass
-        try:
-            return get_database_title(document)
-        except AttributeError as e:
-            pass
+if __name__ == "__main__":
+    from notion_client import Client
 
-    except Exception as e:
-        logger.exception(e)
-
-    return "No Title Available"
-
-
-# end def
+    notion_client = Client(auth=os.environ["NOTION_TOKEN"])
+    search = notion_client.search()
+    results = search.get("results")
