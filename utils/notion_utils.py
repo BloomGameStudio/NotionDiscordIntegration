@@ -1,7 +1,11 @@
+import re
+from helpers import find_nested_dict_key
 from notion_client import AsyncClient
 import os
 from pprint import pprint
 from my_logger import logger
+from typing import Union
+
 
 notion = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
@@ -61,7 +65,7 @@ def get_page_title(page):
     except:
         pass
 
-    return "No Title Availabe"
+    return "No Title Available"
 
 
 def get_page_plain_text_title(page):
@@ -78,3 +82,29 @@ def get_page_plain_text_title(page):
     # pprint(f"_plain_text:{_plain_text}")
 
     return plain_text
+
+
+def get_database_title(database) -> str:
+    """
+    Purpose:
+    """
+
+    _title = database.get("title")[0]
+    plain_text = _title.get("plain_text")
+    return plain_text
+
+
+# end def
+
+
+def get_title(document: Union[list, dict]) -> str:
+    plain_text = find_nested_dict_key(document, "plain_text")
+    return plain_text or "No Title Available"
+
+
+if __name__ == "__main__":
+    from notion_client import Client
+
+    notion_client = Client(auth=os.environ["NOTION_TOKEN"])
+    search = notion_client.search()
+    results = search.get("results")
