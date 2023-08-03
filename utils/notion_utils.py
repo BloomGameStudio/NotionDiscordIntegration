@@ -32,34 +32,40 @@ async def get_username_by_id(id):
 
 
 def get_page_title(page):
-    _properties = page.get("properties")
-    # pprint(f"properties: {_properties}")
-
     try:
-        _Name = _properties.get("Name")
-        # pprint(f"Name:{_Name}")
-        _title = _Name.get("title")[0]
-        # pprint(f"_title:{_title}")
-    except AttributeError as e:
+        _properties = page.get("properties")
+        # pprint(f"properties: {_properties}")
+
+        try:
+            _Name = _properties.get("Name")
+            # pprint(f"Name:{_Name}")
+            _title = _Name.get("title")[0]
+            # pprint(f"_title:{_title}")
+        except AttributeError as e:
+            pass
+
+        try:
+            _Page = _properties.get("Page")
+            # pprint(f"Page:{_Page}")
+            _title = _Page.get("title")[0]
+            # pprint(f"_title:{_title}")
+        except AttributeError as e:
+            pass
+
+        _plain_text = _title.get("plain_text")
+        # pprint(f"_plain_text:{_plain_text}")
+
+        _text = _title.get("text")
+        # pprint(f"_text:{_text}")
+
+        title = _text.get("content")
+        # pprint(f"title:{title}")
+        return title
+
+    except:
         pass
 
-    try:
-        _Page = _properties.get("Page")
-        # pprint(f"Page:{_Page}")
-        _title = _Page.get("title")[0]
-        # pprint(f"_title:{_title}")
-    except AttributeError as e:
-        pass
-
-    _plain_text = _title.get("plain_text")
-    # pprint(f"_plain_text:{_plain_text}")
-
-    _text = _title.get("text")
-    # pprint(f"_text:{_text}")
-
-    title = _text.get("content")
-    # pprint(f"title:{title}")
-    return title
+    return "No Title Available"
 
 
 def get_page_plain_text_title(page):
