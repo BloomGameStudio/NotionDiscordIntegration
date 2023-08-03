@@ -81,7 +81,7 @@ async def handle_creation(chan, result, db_lock):
 
     # We have a creation
 
-    title = notion_utils.get_page_title(result)
+    title = notion_utils.get_title(result)
     # pprint(f"title:{title}")
 
     created_by_user = await notion_utils.get_username_by_id(
@@ -156,7 +156,7 @@ async def handle_update(chan, result, db_lock):
         # We have a update
         logger.debug("We have a update")
 
-        title = notion_utils.get_page_title(result)
+        title = notion_utils.get_title(result)
         # pprint(f"title:{title}")
 
         logger.debug("Getting the notion username of the last edited by")
