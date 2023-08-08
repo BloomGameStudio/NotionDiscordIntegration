@@ -27,6 +27,8 @@ import asyncio
 from my_logger import logger
 import textwrap
 from notion_client import AsyncClient
+import pytz
+from datetime import timedelta
 
 # Initialize DB and notion client
 db = TinyDB("db.json")
@@ -193,6 +195,93 @@ async def handle_update(chan, result, db_lock):
         # TODO: Prune db
 
     return
+
+async def handle_aggregate_updates(chan):
+    logger.debug("Handle Aggregate Updates")
+
+    # Calculate the date 7 days ago from today in UTC timezone
+    seven_days_ago = datetime.now(pytz.UTC) - timedelta(days=7)
+
+    # Search all shared Notion databases and pages the bot has access to
+    response = await notion_client.search()
+    results = response.get("results")
+    logger.debug(f"Results len: {len(results)}")
+
+    # Initialize an empty list to store aggregated changes
+    aggregated_changes = []
+
+    for result in results:
+        properties = result.get("properties")
+        if properties:
+            tags_property = properties.get("Tags")
+            if tags_property and tags_property.get("type") == "multi_select":
+                tags_options = tags_property.get("multi_select", [])
+
+            # Check if tags_options is a list of dictionaries or a dictionary with "options" key
+                if isinstance(tags_options, list):
+                # Handle the case where tags_options is a list of dictionaries
+                    if any(option.get("name") == "Digest" for option in tags_options):
+                        last_edited_time = parser.parse(result.get("last_edited_time"))
+                        last_edited_time = last_edited_time.replace(tzinfo=pytz.UTC)
+                        if last_edited_time >= seven_days_ago:
+                            aggregated_changes.append(result)
+                elif isinstance(tags_options, dict) and "options" in tags_options:
+                # Handle the case where tags_options is a dictionary with an "options" key
+                    if any(option["name"] == "Digest" for option in tags_options["options"]):
+                        last_edited_time = parser.parse(result.get("last_edited_time"))
+                        last_edited_time = last_edited_time.replace(tzinfo=pytz.UTC)
+                        if last_edited_time >= seven_days_ago:
+                            aggregated_changes.append(result)
+            else:
+                logger.debug("No multi_select tags options in properties")
+        else:
+            logger.debug("No properties found in result")
+
+    # Check if there are aggregated changes to send
+    if len(aggregated_changes) > 0:
+        # Create a Discord message with the aggregated changes
+        msg = "📆 **__Aggregate Changes in the Last 7 Days__** 📆\n\n"
+        messages = []
+        current_msg = msg
+
+        for result in aggregated_changes:
+        
+            title = notion_utils.get_title(result)
+            edited_by_user = await notion_utils.get_username_by_id(
+                result.get("last_edited_by").get("id")
+            )
+            url = result.get("url")
+            last_edited_time = parser.parse(result.get("last_edited_time")).strftime(
+                "%d.%m.%Y %H:%M"
+            )
+
+            change_details = f"""
+            **Title:** {title}
+            **Edited By:** {edited_by_user}
+            **Time:** {last_edited_time}
+            **Link:** {url}
+            """
+
+            # If adding the current change to the current message would exceed the limit, send the current message
+            if len(current_msg) + len(change_details) > 1999:
+                messages.append(current_msg)
+                current_msg = msg
+
+            current_msg += change_details
+
+        # Add the last message to the list of messages
+        if current_msg != msg:
+            messages.append(current_msg)
+
+        # Send all the messages
+        for message in messages:
+            dedented_msg = textwrap.dedent(message)
+            await chan.send(dedented_msg)
+        
+
+    return
+
+
 
 
 if __name__ == "__main__":
