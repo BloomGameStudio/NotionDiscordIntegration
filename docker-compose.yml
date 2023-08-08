@@ -1,0 +1,6 @@
+version: '3'
+services:
+  bot:
+    image: ghcr.io/bloomgamestudio/notiondiscordintegration:main
+    restart: unless-stopped
+    env_file: .env
