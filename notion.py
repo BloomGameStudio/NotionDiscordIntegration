@@ -259,14 +259,14 @@ async def handle_aggregate_updates(chan):
                     result.get("last_edited_by").get("id")
                 )
                 url = result.get("url")
-                last_edited_time = parser.parse(
+                last_edited_time_formatted = parser.parse(
                     result.get("last_edited_time")
-                ).strftime("%d.%m.%Y %H:%M")
-
+                )
+                timestamp_discord_syntax = f"<t:{int(last_edited_time.timestamp())}:d>"
                 change_details = f"""
             **Title:** {title}
             **Edited By:** {edited_by_user}
-            **Time:** {last_edited_time}
+            **Time:** {timestamp_discord_syntax}
             **Link:** {url}
             """
 
