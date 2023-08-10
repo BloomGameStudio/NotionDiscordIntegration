@@ -2,7 +2,6 @@ import discord
 import os
 import asyncio
 import notion
-import pytz
 from my_logger import logger
 from constants import NOTION_NOTIFICATION_CHANNEL
 
