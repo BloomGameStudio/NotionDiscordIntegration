@@ -286,8 +286,11 @@ async def handle_aggregate_updates(chan):
 
             # Send all the messages
             for message in messages:
-                dedented_msg = textwrap.dedent(message)
-                await chan.send(dedented_msg)
+                try:
+                    dedented_msg = textwrap.dedent(message)
+                    await chan.send(dedented_msg)
+                except Exception as e:
+                    logger.error(f"Error sending message: {e}")
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
