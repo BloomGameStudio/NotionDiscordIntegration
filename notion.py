@@ -51,7 +51,10 @@ last_update_times = {}
 
 # end def
 
-
+def format_discord_timestamp(time_str):
+    timestamp = parser.parse(time_str)
+    return f"<t:{int(timestamp.timestamp())}:d>"
+    
 async def handle_creations(chan, db_lock):
     logger.debug("Handle Creation")
     # Search all shared Notion databases and pages the bot has access to
@@ -92,13 +95,14 @@ async def handle_creation(chan, result, db_lock):
 
     url = result.get("url")
     cover = result.get("cover", "No Cover Available")
-    created_time = parser.parse(result.get("created_time")).strftime("%d.%m.%Y %H:%M")
-
+    created_time_str = result.get("created_time")
+    created_time_syntax = format_discord_timestamp(created_time_str)
+    
     msg = f"""
             🧬 **__New {title}__** 🧬
             **Created By:** {created_by_user}
             **Title:** {title}
-            **Time:** {created_time}
+            **Time:** {created_time_syntax}
             **Link:** {url}
             """
 
@@ -172,14 +176,13 @@ async def handle_update(chan, result, db_lock):
 
         url = result.get("url")
         cover = result.get("cover", "No Cover Available")
-        last_edited_time_formatted = parser.parse(result.get("last_edited_time"))
-        timestamp_discord_syntax = f"<t:{int(last_edited_time_formatted.timestamp())}:d>"
-
+        last_edited_time_str = result.get("last_edited_time")
+        last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
         msg = f"""
     📡**__{title} Update__**📡
     **Title:** {title}
     **Edited By:** {edited_by_user}
-    **Time:** {timestamp_discord_syntax}
+    **Time:** {last_edited_time_syntax}
     **Link:** {url}
     """
 
@@ -257,14 +260,12 @@ async def handle_aggregate_updates(chan):
                     result.get("last_edited_by").get("id")
                 )
                 url = result.get("url")
-                last_edited_time_formatted = parser.parse(
-                    result.get("last_edited_time")
-                )
-                timestamp_discord_syntax = f"<t:{int(last_edited_time.timestamp())}:d>"
+                last_edited_time_str = result.get("last_edited_time")
+                last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
                 change_details = f"""
             **Title:** {title}
             **Edited By:** {edited_by_user}
-            **Time:** {timestamp_discord_syntax}
+            **Time:** {last_edited_time_syntax}
             **Link:** {url}
             """
 
