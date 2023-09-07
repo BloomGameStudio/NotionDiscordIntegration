@@ -29,7 +29,6 @@ import textwrap
 from notion_client import AsyncClient
 from datetime import timedelta
 
-
 # Initialize DB and notion client
 db = TinyDB("db.json")
 notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
@@ -48,10 +47,14 @@ async def sync_db(db_lock) -> None:
 
     return
 
+last_update_times = {}
 
 # end def
 
-
+def format_discord_timestamp(time_str):
+    timestamp = parser.parse(time_str)
+    return f"<t:{int(timestamp.timestamp())}:d>"
+    
 async def handle_creations(chan, db_lock):
     logger.debug("Handle Creation")
     # Search all shared Notion databases and pages the bot has access to
@@ -92,13 +95,14 @@ async def handle_creation(chan, result, db_lock):
 
     url = result.get("url")
     cover = result.get("cover", "No Cover Available")
-    created_time = parser.parse(result.get("created_time")).strftime("%d.%m.%Y %H:%M")
-
+    created_time_str = result.get("created_time")
+    created_time_syntax = format_discord_timestamp(created_time_str)
+    
     msg = f"""
             🧬 **__New {title}__** 🧬
             **Created By:** {created_by_user}
             **Title:** {title}
-            **Time:** {created_time}
+            **Time:** {created_time_syntax}
             **Link:** {url}
             """
 
@@ -121,76 +125,71 @@ async def handle_updates(chan, db_lock):
     results = response.get("results")
     # logger.debug(results)
     logger.debug(f"Results len: {len(results)}")
-
+    logger.info(f"Results len: {len(results)}")	
     for result in results:
         await handle_update(chan, result, db_lock)
-    return
 
 
 async def handle_update(chan, result, db_lock):
-    # logger.info("Handling Notion Update")
+    # Get the page ID from the result
+    page_id = result.get("id")
+    # Get the current time
+    current_time = datetime.now()
+
+    # Check if the page has been updated in the last 60 seconds
+    if page_id in last_update_times:
+        last_update_time = last_update_times[page_id]
+        time_difference = current_time - last_update_time
+        if time_difference.total_seconds() < 14400:
+            return
+
+    # Update the last update time for this page
+    last_update_times[page_id] = current_time
 
     # Compare result to previous results and Insert new results into db
     query = Query()
 
     async with db_lock:
-        # get the db rows that matches the id
+        # get the db rows that match the id
         db_results = await asyncio.to_thread(db.search, query.id == result.get("id"))
-        # db_results = db.search(query.id == result.get("id"))
-
-    # logger.debug(f"DB Results: {db_results}")
 
     if len(db_results) < 1:
-        # async with db_lock:
-        #     # No db Results
-        #     await asyncio.to_thread(db.insert, result)
-        #     # db.insert(result)
+        logger.info(f"No previous results found for {page_id}")
         return
 
     last_db_result = db_results[-1]
 
-    # logger.debug(f"Last DB Result: {last_db_result}")
-
     # Compare Last edited times
-    if parser.parse(result.get("last_edited_time")) > parser.parse(
-        last_db_result.get("last_edited_time")
-    ):
-        # We have a update
-        logger.debug("We have a update")
+    result_last_edited_time = datetime.strptime(result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    last_db_result_last_edited_time = datetime.strptime(last_db_result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    if result_last_edited_time > last_db_result_last_edited_time:
+        # We have an update
+        logger.debug(f"Updating {page_id}")
 
         title = notion_utils.get_title(result)
-        # pprint(f"title:{title}")
-
-        logger.debug("Getting the notion username of the last edited by")
         edited_by_user = await notion_utils.get_username_by_id(
             result.get("last_edited_by").get("id")
         )
-        logger.debug("Got the notion username of the last edited by")
 
         url = result.get("url")
         cover = result.get("cover", "No Cover Available")
-        last_edited_time = parser.parse(result.get("last_edited_time")).strftime(
-            "%d.%m.%Y %H:%M"
-        )
-        logger.debug("Building MSG")
-
+        last_edited_time_str = result.get("last_edited_time")
+        last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
         msg = f"""
-                📡**__{title} Update__**📡
-                **Title:** {title}
-                **Edited By:** {edited_by_user}
-                **Time:** {last_edited_time}
-                **Link:** {url}
-                """
+    📡**__{title} Update__**📡
+    **Title:** {title}
+    **Edited By:** {edited_by_user}
+    **Time:** {last_edited_time_syntax}
+    **Link:** {url}
+    """
 
         dedented_msg = textwrap.dedent(msg)
 
-        logger.debug("Sending Dedented Message to Chan")
         await chan.send(dedented_msg)
-        logger.debug("Sent Dedented Message to Chan")
 
         async with db_lock:
             await asyncio.to_thread(db.insert, result)
-            # db.insert(result)
 
         # TODO: Prune db
 
@@ -259,14 +258,12 @@ async def handle_aggregate_updates(chan):
                     result.get("last_edited_by").get("id")
                 )
                 url = result.get("url")
-                last_edited_time_formatted = parser.parse(
-                    result.get("last_edited_time")
-                )
-                timestamp_discord_syntax = f"<t:{int(last_edited_time.timestamp())}:d>"
+                last_edited_time_str = result.get("last_edited_time")
+                last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
                 change_details = f"""
             **Title:** {title}
             **Edited By:** {edited_by_user}
-            **Time:** {timestamp_discord_syntax}
+            **Time:** {last_edited_time_syntax}
             **Link:** {url}
             """
 
