@@ -133,8 +133,6 @@ async def handle_updates(chan, db_lock):
 async def handle_update(chan, result, db_lock):
     # Get the page ID from the result
     page_id = result.get("id")
-    logger.info(page_id)
-    
     # Get the current time
     current_time = datetime.now()
 
