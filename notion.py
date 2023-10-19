@@ -102,7 +102,7 @@ async def handle_creation(chan, result, db_lock):
             🧬 **__New {title}__** 🧬
             **Created By:** {created_by_user}
             **Title:** {title}
-            **Time:** {created_time_syntax}
+            **Date:** {created_time_syntax}
             **Link:** {url}
             """
 
@@ -180,7 +180,7 @@ async def handle_update(chan, result, db_lock):
     📡**__{title} Update__**📡
     **Title:** {title}
     **Edited By:** {edited_by_user}
-    **Time:** {last_edited_time_syntax}
+    **Date:** {last_edited_time_syntax}
     **Link:** {url}
     """
 
@@ -263,7 +263,7 @@ async def handle_aggregate_updates(chan):
                 change_details = f"""
             **Title:** {title}
             **Edited By:** {edited_by_user}
-            **Time:** {last_edited_time_syntax}
+            **Date:** {last_edited_time_syntax}
             **Link:** {url}
             """
 
