@@ -38,12 +38,15 @@ async def sync_db(db_lock) -> None:
     """
     Sync the db with Notion
     """
+    logger.debug("Starting Notion API search call.")
     response = await notion_client.search()
+    logger.debug("Finished Notion API search call")
     results = response.get("results")
-
     async with db_lock:
         # Insert new results into
+        logger.debug(f"Inserting data into the database: {results}")
         await asyncio.to_thread(db.insert_multiple, results)
+        logger.debug(f"Data inserted into the database successfully")
 
     return
 
@@ -57,13 +60,26 @@ def format_discord_timestamp(time_str):
     
 async def handle_creations(chan, db_lock):
     logger.debug("Handle Creation")
-    # Search all shared Notion databases and pages the bot has access to
     response = await notion_client.search()
     results = response.get("results")
+    
+    # Collect all result IDs
+    result_ids = [result.get("id") for result in results]
 
+    # Fetch all IDs that exist in the database
+    query = Query()
+    async with db_lock:
+        existing_ids = await asyncio.to_thread(db.search, query.id.test(lambda x: x in result_ids))
+    existing_ids_set = {item['id'] for item in existing_ids}
+    
+    # Process only the results not in the database
     for result in results:
-        await handle_creation(chan, result, db_lock)
+        if result.get("id") not in existing_ids_set:
+            logger.debug("Processing results that are not in the database")
+            await handle_creation(chan, result, db_lock)
+    
     return
+
 
 
 async def handle_creation(chan, result, db_lock):
@@ -107,7 +123,9 @@ async def handle_creation(chan, result, db_lock):
             """
 
     dedented_msg = textwrap.dedent(msg)
+    logger.debug(f"Sending message to Discrod:{dedented_msg}")
     await chan.send(dedented_msg)
+    logger.debug(f"Message sent to Disord successfully")
 
     async with db_lock:
         # Insert new results into
@@ -185,9 +203,9 @@ async def handle_update(chan, result, db_lock):
     """
 
         dedented_msg = textwrap.dedent(msg)
-
+        logger.debug(f"Sending message to Discord: {dedented_msg}")
         await chan.send(dedented_msg)
-
+        logger.debug(f"Message sent to Discord successfully")
         async with db_lock:
             await asyncio.to_thread(db.insert, result)
 
@@ -284,8 +302,10 @@ async def handle_aggregate_updates(chan):
             # Send all the messages
             for message in messages:
                 try:
+                    logger.debug(f"Attempting to send all aggregate messages to discord")
                     dedented_msg = textwrap.dedent(message)
                     await chan.send(dedented_msg)
+                    logger.debug(f"Sent aggregate message to discord successfully")
                 except Exception as e:
                     logger.error(f"Error sending message: {e}")
     except Exception as e:
