@@ -33,6 +33,21 @@ from datetime import timedelta
 db = TinyDB("db.json")
 notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
+# Generic async retry decorator
+async def retry_async(coro, *args, retries=3, delay=1, backoff_factor=2, exceptions=(Exception,), **kwargs):
+    attempt = 0
+    while attempt < retries:
+        try:
+            return await coro(*args, **kwargs)
+        except exceptions as e:
+            logger.error(f"Attempt {attempt + 1} failed with error: {e}")
+            attempt += 1
+            if attempt >= retries:
+                logger.error(f"All {retries} attempts failed. No more retries.")
+                raise
+            sleep_time = delay * (backoff_factor ** (attempt - 1))
+            logger.info(f"Retrying in {sleep_time} seconds...")
+            await asyncio.sleep(sleep_time)
 
 async def sync_db(db_lock) -> None:
     """
@@ -64,7 +79,6 @@ async def handle_creations(chan, db_lock):
     for result in results:
         await handle_creation(chan, result, db_lock)
     return
-
 
 async def handle_creation(chan, result, db_lock):
     result_id = result.get("id")
@@ -120,15 +134,17 @@ async def handle_creation(chan, result, db_lock):
 
 async def handle_updates(chan, db_lock):
     logger.debug("Handle Updates")
-    # Search all shared Notion databases and pages the bot has access to
-    response = await notion_client.search()
-    results = response.get("results")
-    # logger.debug(results)
-    logger.debug(f"Results len: {len(results)}")
-    logger.info(f"Results len: {len(results)}")	
-    for result in results:
-        await handle_update(chan, result, db_lock)
-
+    try:
+        # Implement retry logic for the Notion client's search call
+        response = await retry_async(notion_client.search, retries=5, delay=1, backoff_factor=2)
+        results = response.get("results")
+        logger.debug(f"Results len: {len(results)}")
+        logger.info(f"Results len: {len(results)}")
+        for result in results:
+            # Implement retry logic for each handle_update call
+            await retry_async(handle_update, chan, result, db_lock, retries=5, delay=1, backoff_factor=2)
+    except Exception as e:
+        logger.error(f"An error occurred in handle_updates: {e}")
 
 async def handle_update(chan, result, db_lock):
     # Get the page ID from the result
@@ -194,7 +210,6 @@ async def handle_update(chan, result, db_lock):
         # TODO: Prune db
 
     return
-
 
 async def handle_aggregate_updates(chan):
     try:
