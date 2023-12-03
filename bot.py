@@ -2,11 +2,15 @@ import discord
 import os
 import asyncio
 import notion
+import datetime
+import json
 from my_logger import logger
 from constants import NOTION_NOTIFICATION_CHANNEL
 
 
 class MyClient(discord.Client):
+    START_TIME_FILE = "start_time.json"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -30,6 +34,32 @@ class MyClient(discord.Client):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.info("------")
 
+        if not os.path.exists(MyClient.START_TIME_FILE):
+            self.save_start_time()
+    
+    def save_start_time(self):
+        start_time = datetime.datetime.utcnow()
+        try:
+            with open(MyClient.START_TIME_FILE, "w") as file:
+                json.dump({"start_time": start_time.isoformat()}, file)
+        except Exception as e:
+            logger.error(f"Error saving start time: {e}")
+
+    def load_start_time(self):
+        try:
+            if os.path.exists(MyClient.START_TIME_FILE):
+                with open(MyClient.START_TIME_FILE, "r") as file:
+                    data = file.read()
+                    if data:
+                        return datetime.datetime.fromisoformat(json.loads(data)["start_time"])
+        except Exception as e:
+            logger.error(f"Error loading start time: {e}")
+
+        # If the file doesn't exist or is empty, save the start time
+        logger.info("No start time found. Saving start time.")
+        self.save_start_time()
+        return None
+
     async def notion_updates_notifications(self):
         await self.wait_until_ready()
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
@@ -52,18 +82,23 @@ class MyClient(discord.Client):
     async def notion_aggregate_updates_notifications(self):
         await self.wait_until_ready()
 
-        # Wait for 7 days before the first run
-        logger.info("Waiting 7 days before running aggregate updates for the first time")
-        await asyncio.sleep(7 * 24 * 60 * 60)  # 7 days in seconds
 
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
 
         while not self.is_closed():
-            await notion.handle_aggregate_updates(channel, self.db_lock)
-            logger.info("Notion Aggregate Updates handled")
-            # Then it will wait for another 7 days before the next run
-            await asyncio.sleep(7 * 24 * 60 * 60) # Run task once a week
 
+            start_time = self.load_start_time()
+            if start_time:
+                time_difference = datetime.datetime.utcnow() - start_time
+                days_passed = time_difference.days
+
+                if days_passed >= 7:
+                    await notion.handle.aggregate_updates(channel, self)
+                    logger.info("Notion Aggregate Updates Handled")
+
+                    #Reset start time for next 7-day cycle
+                    self.save_start_time()
+            await asyncio.sleep(60 * 24 * 24)
 
 intents = discord.Intents.default()
 
