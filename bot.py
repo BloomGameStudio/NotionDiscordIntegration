@@ -98,6 +98,7 @@ class MyClient(discord.Client):
 
                     #Reset start time for next 7-day cycle
                     self.save_start_time()
+                    logger.info("Save start time updated")
             await asyncio.sleep(60 * 24 * 24)
 
 intents = discord.Intents.default()
