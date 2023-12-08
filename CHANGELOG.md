@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Tracking of start time and calculating of time difference to ensure that if bot is restarted aggregate updates are not delayed / missed due to timer resetting.
+- load_start_time and save_start_time functions functions added to keep track of the bots start time. This handles instances where the bot may be restarted which would previously cause delays and potentially missed aggregate updates.
 
 ### Changed
 
