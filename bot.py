@@ -9,7 +9,7 @@ from constants import NOTION_NOTIFICATION_CHANNEL
 
 
 class MyClient(discord.Client):
-    START_TIME_FILE = "start_time.json"
+    START_TIME_FILE = "/bot/start_time.json"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -88,8 +88,10 @@ class MyClient(discord.Client):
         while not self.is_closed():
 
             start_time = self.load_start_time()
+            logger.info(f"Start time: {start_time}")
             if start_time:
                 time_difference = datetime.datetime.utcnow() - start_time
+                logger.info(f"Time difference: {time_difference}")
                 days_passed = time_difference.days
 
                 if days_passed >= 7:
@@ -98,7 +100,6 @@ class MyClient(discord.Client):
 
                     #Reset start time for next 7-day cycle
                     self.save_start_time()
-                    logger.info("Save start time updated")
             await asyncio.sleep(60 * 60 * 48)
 
 intents = discord.Intents.default()
