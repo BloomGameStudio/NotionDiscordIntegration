@@ -4,3 +4,8 @@ services:
     image: ghcr.io/bloomgamestudio/notiondiscordintegration:main
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - notion_bot_volume:/bot
+
+volumes:
+  notion_bot_volume:
