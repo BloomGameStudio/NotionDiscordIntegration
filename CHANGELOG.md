@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 29-12-2023
+
 ### Added
 
 - load_start_time and save_start_time functions functions added to keep track of the bots start time. This handles instances where the bot may be restarted which would previously cause delays and potentially missed aggregate updates.
+
+- This CHANGELOG file.
 
 ### Changed
 
 - Frequency in which notion_aggregate_updates_notifications is called within bot.py
 
-### Added
-
-- This CHANGELOG file.
-
+[unreleased]: https://github.com/BloomGameStudio/NotionDiscordIntegration/compare/staging...dev
+[0.1.0]: https://github.com/BloomGameStudio/NotionDiscordIntegration/releases/tag/0.1.0
