@@ -36,7 +36,7 @@ class MyClient(discord.Client):
 
         if not os.path.exists(MyClient.START_TIME_FILE):
             self.save_start_time()
-    
+
     def save_start_time(self):
         start_time = datetime.datetime.utcnow()
         try:
@@ -51,7 +51,9 @@ class MyClient(discord.Client):
                 with open(MyClient.START_TIME_FILE, "r") as file:
                     data = file.read()
                     if data:
-                        return datetime.datetime.fromisoformat(json.loads(data)["start_time"])
+                        return datetime.datetime.fromisoformat(
+                            json.loads(data)["start_time"]
+                        )
         except Exception as e:
             logger.error(f"Error loading start time: {e}")
 
