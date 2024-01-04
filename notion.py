@@ -33,8 +33,11 @@ from datetime import timedelta
 db = TinyDB("db.json")
 notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
+
 # Generic async retry decorator
-async def retry_async(coro, *args, retries=3, delay=1, backoff_factor=2, exceptions=(Exception,), **kwargs):
+async def retry_async(
+    coro, *args, retries=3, delay=1, backoff_factor=2, exceptions=(Exception,), **kwargs
+):
     attempt = 0
     while attempt < retries:
         try:
@@ -49,6 +52,7 @@ async def retry_async(coro, *args, retries=3, delay=1, backoff_factor=2, excepti
             logger.info(f"Retrying in {sleep_time} seconds...")
             await asyncio.sleep(sleep_time)
 
+
 async def sync_db(db_lock) -> None:
     """
     Sync the db with Notion
@@ -62,14 +66,16 @@ async def sync_db(db_lock) -> None:
 
     return
 
+
 last_update_times = {}
 
 # end def
 
+
 def format_discord_timestamp(time_str):
     timestamp = parser.parse(time_str)
     return f"<t:{int(timestamp.timestamp())}:d>"
-    
+
 async def handle_creations(chan, db_lock):
     logger.debug("Handle Creation")
     # Search all shared Notion databases and pages the bot has access to
