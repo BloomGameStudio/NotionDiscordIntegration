@@ -84,11 +84,9 @@ class MyClient(discord.Client):
     async def notion_aggregate_updates_notifications(self):
         await self.wait_until_ready()
 
-
         channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
 
         while not self.is_closed():
-
             start_time = self.load_start_time()
             logger.info(f"Start time: {start_time}")
             if start_time:
@@ -97,10 +95,10 @@ class MyClient(discord.Client):
                 days_passed = time_difference.days
 
                 if days_passed >= 7:
-                    await notion.handle.aggregate_updates(channel, self)
+                    await notion.handle_aggregate_updates(channel, self)
                     logger.info("Notion Aggregate Updates Handled")
 
-                    #Reset start time for next 7-day cycle
+                    # Reset start time for next 7-day cycle
                     self.save_start_time()
             await asyncio.sleep(60 * 60 * 24)
 
