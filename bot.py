@@ -102,6 +102,7 @@ class MyClient(discord.Client):
                     self.save_start_time()
             await asyncio.sleep(60 * 60 * 24)
 
+
 intents = discord.Intents.default()
 
 client = MyClient(intents=intents)
