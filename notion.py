@@ -69,8 +69,6 @@ async def sync_db(db_lock) -> None:
 
 last_update_times = {}
 
-# end def
-
 
 def format_discord_timestamp(time_str):
     timestamp = parser.parse(time_str)
@@ -78,7 +76,7 @@ def format_discord_timestamp(time_str):
 
 
 async def handle_creations(channels: list[any], db_lock):
-    logger.debug("Handle Creation")
+    logger.info("Handle Creations")
     # Search all shared Notion databases and pages the bot has access to
     response = await notion_client.search()
     results = response.get("results")
@@ -143,7 +141,6 @@ async def handle_creation(channels: list[any], result, db_lock):
 
 
 async def handle_updates(channels: list[any], db_lock):
-    logger.debug("Handle Updates")
     try:
         # Implement retry logic for the Notion client's search call
         response = await retry_async(
@@ -173,7 +170,6 @@ async def handle_update(channels: list[any], result, db_lock):
     # Get the current time
     current_time = datetime.now()
 
-    # Check if the page has been updated in the last 60 seconds
     if page_id in last_update_times:
         last_update_time = last_update_times[page_id]
         time_difference = current_time - last_update_time
