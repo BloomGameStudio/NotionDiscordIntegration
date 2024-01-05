@@ -51,12 +51,6 @@ class MyClient(discord.Client):
         if not os.path.exists(MyClient.START_TIME_FILE):
             self.save_start_time()
 
-        # Get Channels to send the messages to
-        self.channels: list[discord.TextChannel] = []
-
-        for chan_id in NOTION_NOTIFICATION_CHANNELS:
-            self.channels.append(self.get_channel(chan_id))
-
     def save_start_time(self):
         start_time = datetime.datetime.utcnow()
         try:
