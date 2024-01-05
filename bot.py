@@ -5,7 +5,7 @@ import notion
 import datetime
 import json
 from my_logger import logger
-from constants import NOTION_NOTIFICATION_CHANNEL
+from constants import NOTION_NOTIFICATION_CHANNELS
 
 
 class MyClient(discord.Client):
@@ -37,6 +37,12 @@ class MyClient(discord.Client):
         if not os.path.exists(MyClient.START_TIME_FILE):
             self.save_start_time()
 
+        # Get Channels to send the messages to
+        self.channels: list[discord.TextChannel] = []
+
+        for chan_id in NOTION_NOTIFICATION_CHANNELS:
+            self.channels.append(self.get_channel(chan_id))
+
     def save_start_time(self):
         start_time = datetime.datetime.utcnow()
         try:
@@ -64,9 +70,9 @@ class MyClient(discord.Client):
 
     async def notion_updates_notifications(self):
         await self.wait_until_ready()
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
+
         while not self.is_closed():
-            await notion.handle_updates(channel, self.db_lock)
+            await notion.handle_updates(self.channels, self.db_lock)
             logger.info("Notion updates handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
@@ -75,16 +81,13 @@ class MyClient(discord.Client):
 
         await notion.sync_db(self.db_lock)
 
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
-            await notion.handle_creations(channel, self.db_lock)
+            await notion.handle_creations(self.channels, self.db_lock)
             logger.info("Notion Creations handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
     async def notion_aggregate_updates_notifications(self):
         await self.wait_until_ready()
-
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
 
         while not self.is_closed():
             start_time = self.load_start_time()
@@ -95,7 +98,7 @@ class MyClient(discord.Client):
                 days_passed = time_difference.days
 
                 if days_passed >= 7:
-                    await notion.handle_aggregate_updates(channel, self)
+                    await notion.handle_aggregate_updates(self.channels, self)
                     logger.info("Notion Aggregate Updates Handled")
 
                     # Reset start time for next 7-day cycle
