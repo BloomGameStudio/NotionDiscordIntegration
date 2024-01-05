@@ -14,6 +14,20 @@ class MyClient(discord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @property
+    async def channels(self) -> list[discord.TextChannel]:
+        # The channels to which to send notifcations to
+
+        await self.wait_until_ready()
+
+        channels: list[discord.TextChannel] = []
+        for chan_id in NOTION_NOTIFICATION_CHANNELS:
+            channels.append(self.get_channel(chan_id))
+
+        logger.debug(f"Notion Notfication Channels: {channels}")
+
+        return channels
+
     async def setup_hook(self) -> None:
         self.db_lock = asyncio.Lock()
 
