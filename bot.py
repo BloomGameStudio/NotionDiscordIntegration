@@ -80,7 +80,7 @@ class MyClient(discord.Client):
         await self.wait_until_ready()
 
         while not self.is_closed():
-            await notion.handle_updates(self.channels, self.db_lock)
+            await notion.handle_updates(await self.channels, self.db_lock)
             logger.info("Notion updates handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
@@ -90,7 +90,7 @@ class MyClient(discord.Client):
         await notion.sync_db(self.db_lock)
 
         while not self.is_closed():
-            await notion.handle_creations(self.channels, self.db_lock)
+            await notion.handle_creations(await self.channels, self.db_lock)
             logger.info("Notion Creations handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
@@ -106,7 +106,7 @@ class MyClient(discord.Client):
                 days_passed = time_difference.days
 
                 if days_passed >= 7:
-                    await notion.handle_aggregate_updates(self.channels, self)
+                    await notion.handle_aggregate_updates(await self.channels, self)
                     logger.info("Notion Aggregate Updates Handled")
 
                     # Reset start time for next 7-day cycle
