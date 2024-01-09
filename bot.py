@@ -5,7 +5,7 @@ import notion
 import datetime
 import json
 from my_logger import logger
-from constants import NOTION_NOTIFICATION_CHANNEL
+from constants import NOTION_NOTIFICATION_CHANNELS
 
 
 class MyClient(discord.Client):
@@ -13,6 +13,20 @@ class MyClient(discord.Client):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @property
+    async def channels(self) -> list[discord.TextChannel]:
+        # The channels to which to send notifcations to
+
+        await self.wait_until_ready()
+
+        channels: list[discord.TextChannel] = []
+        for chan_id in NOTION_NOTIFICATION_CHANNELS:
+            channels.append(self.get_channel(chan_id))
+
+        logger.debug(f"Notion Notfication Channels: {channels}")
+
+        return channels
 
     async def setup_hook(self) -> None:
         self.db_lock = asyncio.Lock()
@@ -36,7 +50,7 @@ class MyClient(discord.Client):
 
         if not os.path.exists(MyClient.START_TIME_FILE):
             self.save_start_time()
-    
+
     def save_start_time(self):
         start_time = datetime.datetime.utcnow()
         try:
@@ -51,7 +65,9 @@ class MyClient(discord.Client):
                 with open(MyClient.START_TIME_FILE, "r") as file:
                     data = file.read()
                     if data:
-                        return datetime.datetime.fromisoformat(json.loads(data)["start_time"])
+                        return datetime.datetime.fromisoformat(
+                            json.loads(data)["start_time"]
+                        )
         except Exception as e:
             logger.error(f"Error loading start time: {e}")
 
@@ -62,9 +78,9 @@ class MyClient(discord.Client):
 
     async def notion_updates_notifications(self):
         await self.wait_until_ready()
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
+
         while not self.is_closed():
-            await notion.handle_updates(channel, self.db_lock)
+            await notion.handle_updates(await self.channels, self.db_lock)
             logger.info("Notion updates handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
@@ -73,20 +89,15 @@ class MyClient(discord.Client):
 
         await notion.sync_db(self.db_lock)
 
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
         while not self.is_closed():
-            await notion.handle_creations(channel, self.db_lock)
+            await notion.handle_creations(await self.channels, self.db_lock)
             logger.info("Notion Creations handled")
             await asyncio.sleep(10)  # task runs every x seconds
 
     async def notion_aggregate_updates_notifications(self):
         await self.wait_until_ready()
 
-
-        channel = self.get_channel(NOTION_NOTIFICATION_CHANNEL)
-
         while not self.is_closed():
-
             start_time = self.load_start_time()
             logger.info(f"Start time: {start_time}")
             if start_time:
@@ -95,12 +106,13 @@ class MyClient(discord.Client):
                 days_passed = time_difference.days
 
                 if days_passed >= 7:
-                    await notion.handle.aggregate_updates(channel, self)
+                    await notion.handle_aggregate_updates(await self.channels, self)
                     logger.info("Notion Aggregate Updates Handled")
 
-                    #Reset start time for next 7-day cycle
+                    # Reset start time for next 7-day cycle
                     self.save_start_time()
             await asyncio.sleep(60 * 60 * 24)
+
 
 intents = discord.Intents.default()
 

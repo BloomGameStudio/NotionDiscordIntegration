@@ -33,8 +33,11 @@ from datetime import timedelta
 db = TinyDB("db.json")
 notion_client = AsyncClient(auth=os.environ["NOTION_TOKEN"])
 
+
 # Generic async retry decorator
-async def retry_async(coro, *args, retries=3, delay=1, backoff_factor=2, exceptions=(Exception,), **kwargs):
+async def retry_async(
+    coro, *args, retries=3, delay=1, backoff_factor=2, exceptions=(Exception,), **kwargs
+):
     attempt = 0
     while attempt < retries:
         try:
@@ -49,6 +52,7 @@ async def retry_async(coro, *args, retries=3, delay=1, backoff_factor=2, excepti
             logger.info(f"Retrying in {sleep_time} seconds...")
             await asyncio.sleep(sleep_time)
 
+
 async def sync_db(db_lock) -> None:
     """
     Sync the db with Notion
@@ -62,25 +66,27 @@ async def sync_db(db_lock) -> None:
 
     return
 
+
 last_update_times = {}
 
-# end def
 
 def format_discord_timestamp(time_str):
     timestamp = parser.parse(time_str)
     return f"<t:{int(timestamp.timestamp())}:d>"
-    
-async def handle_creations(chan, db_lock):
-    logger.debug("Handle Creation")
+
+
+async def handle_creations(channels: list[any], db_lock):
+    logger.info("Handle Creations")
     # Search all shared Notion databases and pages the bot has access to
     response = await notion_client.search()
     results = response.get("results")
 
     for result in results:
-        await handle_creation(chan, result, db_lock)
+        await handle_creation(channels, result, db_lock)
     return
 
-async def handle_creation(chan, result, db_lock):
+
+async def handle_creation(channels: list[any], result, db_lock):
     result_id = result.get("id")
     logger.debug(f"Handle Creation Result {result_id}")
     # Check for new creations
@@ -111,7 +117,7 @@ async def handle_creation(chan, result, db_lock):
     cover = result.get("cover", "No Cover Available")
     created_time_str = result.get("created_time")
     created_time_syntax = format_discord_timestamp(created_time_str)
-    
+
     msg = f"""
             🧬 **__New {title}__** 🧬
             **Created By:** {created_by_user}
@@ -121,7 +127,9 @@ async def handle_creation(chan, result, db_lock):
             """
 
     dedented_msg = textwrap.dedent(msg)
-    await chan.send(dedented_msg)
+
+    for chan in channels:
+        await chan.send(dedented_msg)
 
     async with db_lock:
         # Insert new results into
@@ -132,27 +140,36 @@ async def handle_creation(chan, result, db_lock):
     return
 
 
-async def handle_updates(chan, db_lock):
-    logger.debug("Handle Updates")
+async def handle_updates(channels: list[any], db_lock):
     try:
         # Implement retry logic for the Notion client's search call
-        response = await retry_async(notion_client.search, retries=5, delay=1, backoff_factor=2)
+        response = await retry_async(
+            notion_client.search, retries=5, delay=1, backoff_factor=2
+        )
         results = response.get("results")
         logger.debug(f"Results len: {len(results)}")
         logger.info(f"Results len: {len(results)}")
         for result in results:
             # Implement retry logic for each handle_update call
-            await retry_async(handle_update, chan, result, db_lock, retries=5, delay=1, backoff_factor=2)
+            await retry_async(
+                handle_update,
+                channels,
+                result,
+                db_lock,
+                retries=5,
+                delay=1,
+                backoff_factor=2,
+            )
     except Exception as e:
         logger.error(f"An error occurred in handle_updates: {e}")
 
-async def handle_update(chan, result, db_lock):
+
+async def handle_update(channels: list[any], result, db_lock):
     # Get the page ID from the result
     page_id = result.get("id")
     # Get the current time
     current_time = datetime.now()
 
-    # Check if the page has been updated in the last 60 seconds
     if page_id in last_update_times:
         last_update_time = last_update_times[page_id]
         time_difference = current_time - last_update_time
@@ -176,9 +193,13 @@ async def handle_update(chan, result, db_lock):
     last_db_result = db_results[-1]
 
     # Compare Last edited times
-    result_last_edited_time = datetime.strptime(result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ")
-    last_db_result_last_edited_time = datetime.strptime(last_db_result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ")
-    
+    result_last_edited_time = datetime.strptime(
+        result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
+    last_db_result_last_edited_time = datetime.strptime(
+        last_db_result.get("last_edited_time"), "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
+
     if result_last_edited_time > last_db_result_last_edited_time:
         # We have an update
         logger.debug(f"Updating {page_id}")
@@ -193,16 +214,17 @@ async def handle_update(chan, result, db_lock):
         last_edited_time_str = result.get("last_edited_time")
         last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
         msg = f"""
-    📡**__{title} Update__**📡
-    **Title:** {title}
-    **Edited By:** {edited_by_user}
-    **Time:** {last_edited_time_syntax}
-    **Link:** {url}
-    """
+                📡**__{title} Update__**📡
+                **Title:** {title}
+                **Edited By:** {edited_by_user}
+                **Time:** {last_edited_time_syntax}
+                **Link:** {url}
+                """
 
         dedented_msg = textwrap.dedent(msg)
 
-        await chan.send(dedented_msg)
+        for chan in channels:
+            await chan.send(dedented_msg)
 
         async with db_lock:
             await asyncio.to_thread(db.insert, result)
@@ -211,7 +233,8 @@ async def handle_update(chan, result, db_lock):
 
     return
 
-async def handle_aggregate_updates(chan):
+
+async def handle_aggregate_updates(channels: list[any]):
     try:
         logger.debug("Handle Aggregate Updates")
 
@@ -276,11 +299,11 @@ async def handle_aggregate_updates(chan):
                 last_edited_time_str = result.get("last_edited_time")
                 last_edited_time_syntax = format_discord_timestamp(last_edited_time_str)
                 change_details = f"""
-            **Title:** {title}
-            **Edited By:** {edited_by_user}
-            **Time:** {last_edited_time_syntax}
-            **Link:** {url}
-            """
+                                    **Title:** {title}
+                                    **Edited By:** {edited_by_user}
+                                    **Time:** {last_edited_time_syntax}
+                                    **Link:** {url}
+                                    """
 
                 change_details = "\n".join(
                     line.lstrip() for line in change_details.strip().split("\n")
@@ -300,9 +323,13 @@ async def handle_aggregate_updates(chan):
             for message in messages:
                 try:
                     dedented_msg = textwrap.dedent(message)
-                    await chan.send(dedented_msg)
+
+                    for chan in channels:
+                        await chan.send(dedented_msg)
+
                 except Exception as e:
                     logger.error(f"Error sending message: {e}")
+
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
