@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 9-1-2024
+
+### Added 
+
+- Multi server support. The capability to send Notion notifications to multiple servers based on the list of discord channel id's in constants.
+
 ## [0.1.0] - 29-12-2023
 
 ### Added
@@ -20,4 +26,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frequency in which notion_aggregate_updates_notifications is called within bot.py
 
 [unreleased]: https://github.com/BloomGameStudio/NotionDiscordIntegration/compare/staging...dev
+[0.1.1]: https://github.com/BloomGameStudio/NotionDiscordIntegration/releases/tag/0.1.1
 [0.1.0]: https://github.com/BloomGameStudio/NotionDiscordIntegration/releases/tag/0.1.0
