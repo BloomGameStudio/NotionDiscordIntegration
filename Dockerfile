@@ -1,20 +1,25 @@
-FROM python:3.10
+FROM python:3.11-slim
 
-# Install pipenv and compilation dependencies
-RUN pip install pipenv
-RUN apt-get update && apt-get install -y --no-install-recommends gcc
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /bot
 
-# Install python dependencies in /.venv
-COPY Pipfile .
-COPY Pipfile.lock .
-RUN pipenv install --deploy 
+# Copy Pipfile and Pipfile.lock first for better caching
+COPY Pipfile* ./
 
+# Install pipenv and dependencies
+RUN pip install pipenv && \
+    pipenv install --deploy --system
 
-# Install application into container
+# Copy source code
 COPY . .
 
-# Run the application
-CMD pipenv run python bot.py
-# CMD ["pipenv", "run", "python", "bot.py"]
+# Install the package in development mode
+RUN pip install -e .
+
+# Use Python module path
+CMD ["python", "-m", "src.main"]

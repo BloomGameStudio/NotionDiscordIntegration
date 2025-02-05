@@ -1,1 +1,1 @@
-worker: pipenv install --deploy && pipenv run python bot.py
+worker: pipenv install --deploy && pipenv run python -m src.main
