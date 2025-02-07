@@ -8,13 +8,14 @@ from src.application.notion.dto import NotificationMessage
 from src.infrastructure.config.settings import Settings
 from src.utils.logging import logger
 
+
 class DiscordService:
     def __init__(
         self,
         notion_service: NotionService,
         settings: Settings,
         client: discord.Client = None,
-        check_interval: int = 120
+        check_interval: int = 120,
     ):
         self.notion_service = notion_service
         self.settings = settings
@@ -41,11 +42,11 @@ class DiscordService:
             if not self.client.is_ready():
                 logger.info("Waiting for Discord client to be ready...")
                 await self.client.wait_until_ready()
-            
+
             for channel_id in self.notion_service.notification_channels:
                 self.register_channel(channel_id)
                 logger.info(f"Pre-registered channel: {channel_id}")
-            
+
             logger.info("Discord service initialization completed")
         except Exception as e:
             logger.error(f"Error during initialization: {e}", exc_info=True)
@@ -74,17 +75,17 @@ class DiscordService:
         try:
             current_time = datetime.now(timezone.utc)
             time_difference = current_time - self._start_time
-            
+
             if time_difference.days >= 7:
                 async with self._db_lock:
                     notification = await self.notion_service.handle_aggregate_updates(
                         start_time=self._start_time
                     )
-                
+
                 if notification:
                     self._start_time = current_time
                     return notification
-            
+
             return None
         except Exception as e:
             logger.error(f"Error handling aggregate updates: {e}")
@@ -111,9 +112,9 @@ class DiscordService:
                     yield aggregate_notification
 
                 self._last_heartbeat = datetime.utcnow()
-                
+
                 await asyncio.sleep(self.settings.UPDATE_INTERVAL)
-                
+
             except Exception as e:
                 logger.error(f"Error in notification tasks: {e}")
                 await asyncio.sleep(self.settings.UPDATE_INTERVAL)
@@ -124,24 +125,28 @@ class DiscordService:
             "start_time": self._start_time.isoformat(),
             "last_heartbeat": self._last_heartbeat.isoformat(),
             "connected_channels": self.connected_channels,
-            "uptime": str(datetime.utcnow() - self._start_time)
+            "uptime": str(datetime.utcnow() - self._start_time),
         }
 
     async def _send_notification(self, notification: NotificationMessage):
         """Send a notification to all connected channels"""
-        logger.debug(f"Attempting to send notification to channels: {self.connected_channels}")
+        logger.debug(
+            f"Attempting to send notification to channels: {self.connected_channels}"
+        )
         if not self.connected_channels:
             logger.warning("No channels registered to receive notifications")
             return
-        
+
         formatted_message = f"**{notification.title}**\n{notification.content}"
-        
+
         for channel_id in self.connected_channels:
             channel = self.client.get_channel(channel_id)
             if channel:
                 try:
                     await channel.send(content=formatted_message)
-                    logger.info(f"Successfully sent notification to channel {channel_id}")
+                    logger.info(
+                        f"Successfully sent notification to channel {channel_id}"
+                    )
                 except Exception as e:
                     logger.error(f"Error sending message to channel {channel_id}: {e}")
             else:
@@ -158,4 +163,4 @@ class DiscordService:
             except Exception as e:
                 logger.error(f"Error sending message to channel {channel_id}: {e}")
         else:
-            logger.warning(f"Could not find channel with ID: {channel_id}") 
+            logger.warning(f"Could not find channel with ID: {channel_id}")

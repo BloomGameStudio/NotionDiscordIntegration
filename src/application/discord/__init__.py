@@ -1,1 +1,1 @@
-"""Discord-related application services and DTOs.""" 
+"""Discord-related application services and DTOs."""

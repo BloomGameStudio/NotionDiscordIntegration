@@ -1,1 +1,1 @@
-"""Configuration and settings management.""" 
+"""Configuration and settings management."""

@@ -11,13 +11,14 @@ from .dto import NotificationMessage
 from src.utils.logging import logger
 from src.infrastructure.config.constants import MESSAGE_TEMPLATES
 
+
 class NotionService:
     def __init__(
         self,
         notion_client: NotionClient,
         notion_repository: NotionRepository,
         notification_channels: List[int],
-        update_cooldown: int = 14400  # 4 hours default
+        update_cooldown: int = 14400,  # 4 hours default
     ):
         self.notion_client = notion_client
         self.notion_repository = notion_repository
@@ -39,25 +40,31 @@ class NotionService:
         try:
             documents = await self.notion_client.get_recent_documents()
             notifications = []
-            
+
             for doc in documents:
                 existing_doc = await self.notion_repository.get_document(doc.id)
                 if not existing_doc:
-                    title = doc.title[0]['plain_text'] if isinstance(doc.title, list) else doc.title
+                    title = (
+                        doc.title[0]["plain_text"]
+                        if isinstance(doc.title, list)
+                        else doc.title
+                    )
                     doc.title = title  # Update the document title
-                    
+
                     logger.info(f"Saving new document to database: {title}")
                     await self.notion_repository.save_document(doc)
-                    
+
                     created_by = await self._get_user_safely(doc.created_by.id)
                     logger.info(f"Creating notification for new document: {title}")
-                    
-                    notifications.append(NotificationMessage(
-                        title=MESSAGE_TEMPLATES["creation"].format(doc.title),
-                        content=self._format_creation_message(doc, created_by),
-                        timestamp=doc.created_time,
-                        channels=self.notification_channels
-                    ))
+
+                    notifications.append(
+                        NotificationMessage(
+                            title=MESSAGE_TEMPLATES["creation"].format(doc.title),
+                            content=self._format_creation_message(doc, created_by),
+                            timestamp=doc.created_time,
+                            channels=self.notification_channels,
+                        )
+                    )
 
             return notifications
         except Exception as e:
@@ -71,40 +78,48 @@ class NotionService:
             logger.info(f"Processing {len(documents)} potential updates")
             notifications = []
             current_time = datetime.now(timezone.utc)
-            
+
             for doc in documents:
-                title = doc.title[0]['plain_text'] if isinstance(doc.title, list) else doc.title
+                title = (
+                    doc.title[0]["plain_text"]
+                    if isinstance(doc.title, list)
+                    else doc.title
+                )
                 doc.title = title
-                
+
                 if doc.id in self._last_update_times:
                     last_update = self._last_update_times[doc.id]
-                    time_since_last_update = (current_time - last_update).total_seconds()
+                    time_since_last_update = (
+                        current_time - last_update
+                    ).total_seconds()
                     if time_since_last_update < self.update_cooldown:
                         logger.debug(f"Skipping update for {title} due to cooldown")
                         continue
-                
+
                 existing_doc = await self.notion_repository.get_document(doc.id)
                 if existing_doc:
                     has_changes = (
-                        doc.title != existing_doc.title or
-                        doc.last_edited_time > existing_doc.last_edited_time or
-                        doc.properties != existing_doc.properties
+                        doc.title != existing_doc.title
+                        or doc.last_edited_time > existing_doc.last_edited_time
+                        or doc.properties != existing_doc.properties
                     )
-                    
+
                     if has_changes:
                         logger.info(f"Update detected for document: {title}")
                         edited_by = await self._get_user_safely(doc.last_edited_by.id)
                         await self.notion_repository.save_document(doc)
-                        
+
                         self._last_update_times[doc.id] = current_time
-                        
-                        notifications.append(NotificationMessage(
-                            title=MESSAGE_TEMPLATES["update"].format(doc.title),
-                            content=self._format_update_message(doc, edited_by),
-                            timestamp=doc.last_edited_time,
-                            channels=self.notification_channels
-                        ))
-            
+
+                        notifications.append(
+                            NotificationMessage(
+                                title=MESSAGE_TEMPLATES["update"].format(doc.title),
+                                content=self._format_update_message(doc, edited_by),
+                                timestamp=doc.last_edited_time,
+                                channels=self.notification_channels,
+                            )
+                        )
+
             logger.info(f"Created {len(notifications)} update notifications")
             return notifications
         except Exception as e:
@@ -112,9 +127,7 @@ class NotionService:
             return []
 
     async def _process_document_update(
-        self, 
-        doc: NotionDocument, 
-        current_time: datetime
+        self, doc: NotionDocument, current_time: datetime
     ) -> Optional[NotificationMessage]:
         """Process a single document update"""
         try:
@@ -124,22 +137,28 @@ class NotionService:
                     return None
 
             self._last_update_times[doc.id] = current_time
-            last_known_update = await self.notion_repository.get_last_update_time(doc.id)
+            last_known_update = await self.notion_repository.get_last_update_time(
+                doc.id
+            )
 
             if not last_known_update or doc.last_edited_time > last_known_update:
-                title = doc.title[0]['plain_text'] if isinstance(doc.title, list) else doc.title
+                title = (
+                    doc.title[0]["plain_text"]
+                    if isinstance(doc.title, list)
+                    else doc.title
+                )
                 doc.title = title
-                
+
                 logger.info(f"Saving updated document to database: {title}")
                 await self.notion_repository.save_document(doc)
-                
+
                 edited_by = await self._get_user_safely(doc.last_edited_by.id)
-                
+
                 return NotificationMessage(
                     title=MESSAGE_TEMPLATES["update"].format(doc.title),
                     content=self._format_update_message(doc, edited_by),
                     timestamp=doc.last_edited_time,
-                    channels=self.notification_channels
+                    channels=self.notification_channels,
                 )
         except Exception as e:
             logger.error(f"Error processing document update: {e}", exc_info=True)
@@ -156,10 +175,14 @@ class NotionService:
         title = MESSAGE_TEMPLATES["creation"].format(doc.title)
         return f"{title}\n**Created By:** {created_by}\n**Time:** <t:{int(doc.created_time.timestamp())}:F>\n**Link:** {doc.url}"
 
-    async def handle_aggregate_updates(self, start_time: datetime) -> Optional[NotificationMessage]:
+    async def handle_aggregate_updates(
+        self, start_time: datetime
+    ) -> Optional[NotificationMessage]:
         """Handle weekly aggregate updates"""
         try:
-            updated_docs = await self.notion_repository.get_documents_updated_since(start_time)
+            updated_docs = await self.notion_repository.get_documents_updated_since(
+                start_time
+            )
             if not updated_docs:
                 return None
 
@@ -172,7 +195,7 @@ class NotionService:
                 title=MESSAGE_TEMPLATES["weekly_summary"],
                 content=content,
                 timestamp=datetime.now(),
-                channels=self.notification_channels
+                channels=self.notification_channels,
             )
         except Exception as e:
             logger.error(f"Error handling aggregate updates: {e}")
@@ -185,7 +208,7 @@ class NotionService:
                 await self.discord_service.send_message(
                     channel_id=channel_id,
                     title=notification.title,
-                    content=notification.content
+                    content=notification.content,
                 )
         except Exception as e:
-            logger.error(f"Error sending notification: {e}") 
+            logger.error(f"Error sending notification: {e}")

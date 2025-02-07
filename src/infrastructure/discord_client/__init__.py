@@ -1,1 +1,1 @@
-"""Discord client implementation.""" 
+"""Discord client implementation."""

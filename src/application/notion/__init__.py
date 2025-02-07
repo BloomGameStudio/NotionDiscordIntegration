@@ -1,1 +1,1 @@
-"""Notion-related application services and DTOs.""" 
+"""Notion-related application services and DTOs."""

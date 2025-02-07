@@ -1,1 +1,1 @@
-"""Discord domain models and interfaces.""" 
+"""Discord domain models and interfaces."""

@@ -5,6 +5,7 @@ from src.domain.notion.entities import NotionDocument
 from src.utils.logging import logger
 import asyncio
 
+
 class NotionClient:
     def __init__(self, auth_token: str, database_id: str):
         self.client = AsyncClient(auth=auth_token)
@@ -12,13 +13,13 @@ class NotionClient:
         self._user_cache = {}
 
     async def retry_async(
-        self, 
-        coro: Any, 
-        *args, 
-        retries: int = 3, 
-        delay: int = 1, 
-        backoff_factor: int = 2, 
-        **kwargs
+        self,
+        coro: Any,
+        *args,
+        retries: int = 3,
+        delay: int = 1,
+        backoff_factor: int = 2,
+        **kwargs,
     ) -> Any:
         """Generic retry decorator for async operations"""
         attempt = 0
@@ -39,8 +40,7 @@ class NotionClient:
         """Fetch a single document from Notion API"""
         try:
             response = await self.retry_async(
-                self.client.pages.retrieve,
-                page_id=document_id
+                self.client.pages.retrieve, page_id=document_id
             )
             return NotionDocument.from_api_response(response)
         except Exception as e:
@@ -58,14 +58,16 @@ class NotionClient:
                 response = await self.retry_async(
                     self.client.databases.query,
                     database_id=self.database_id,
-                    start_cursor=start_cursor
+                    start_cursor=start_cursor,
                 )
-                
-                documents.extend([
-                    NotionDocument.from_api_response(page)
-                    for page in response["results"]
-                ])
-                
+
+                documents.extend(
+                    [
+                        NotionDocument.from_api_response(page)
+                        for page in response["results"]
+                    ]
+                )
+
                 has_more = response["has_more"]
                 start_cursor = response["next_cursor"]
 
@@ -81,15 +83,11 @@ class NotionClient:
                 self.client.databases.query,
                 database_id=self.database_id,
                 page_size=limit,
-                sorts=[{
-                    "timestamp": "created_time",
-                    "direction": "descending"
-                }]
+                sorts=[{"timestamp": "created_time", "direction": "descending"}],
             )
-            
+
             return [
-                NotionDocument.from_api_response(page)
-                for page in response["results"]
+                NotionDocument.from_api_response(page) for page in response["results"]
             ]
         except Exception as e:
             logger.error(f"Error fetching recent documents: {e}")
@@ -108,17 +106,18 @@ class NotionClient:
                     self.client.databases.query,
                     database_id=self.database_id,
                     start_cursor=start_cursor,
-                    sorts=[{
-                        "timestamp": "last_edited_time",
-                        "direction": "descending"
-                    }]
+                    sorts=[
+                        {"timestamp": "last_edited_time", "direction": "descending"}
+                    ],
                 )
-                
-                documents.extend([
-                    NotionDocument.from_api_response(page)
-                    for page in response["results"]
-                ])
-                
+
+                documents.extend(
+                    [
+                        NotionDocument.from_api_response(page)
+                        for page in response["results"]
+                    ]
+                )
+
                 has_more = response["has_more"]
                 start_cursor = response["next_cursor"]
 
@@ -132,15 +131,12 @@ class NotionClient:
         """Get user details for a user ID, with caching"""
         if user_id in self._user_cache:
             return self._user_cache[user_id]
-        
+
         try:
-            user = await self.retry_async(
-                self.client.users.retrieve,
-                user_id=user_id
-            )
-            self._user_cache[user_id] = user.get('name', 'Unknown User')
+            user = await self.retry_async(self.client.users.retrieve, user_id=user_id)
+            self._user_cache[user_id] = user.get("name", "Unknown User")
             return self._user_cache[user_id]
         except Exception as e:
             logger.debug(f"Could not fetch user {user_id}, using ID as name: {e}")
             self._user_cache[user_id] = user_id[:8]
-            return self._user_cache[user_id] 
+            return self._user_cache[user_id]

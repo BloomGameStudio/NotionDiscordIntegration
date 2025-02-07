@@ -6,13 +6,12 @@ name = "pypi"
 [packages]
 discord-py = ">=2.0.0"
 sqlalchemy = ">=2.0.0"
-asyncpg = ">=0.27.0"
+asyncpg = "*"
 python-dotenv = ">=0.19.0"
 aiosqlite = ">=0.17.0"
+notion-client = "*"
 
 [dev-packages]
-pytest = "*"
-pytest-asyncio = "*"
 black = "*"
 flake8 = "*"
 

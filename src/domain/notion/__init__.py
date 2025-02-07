@@ -1,1 +1,1 @@
-"""Notion domain models and repository interfaces.""" 
+"""Notion domain models and repository interfaces."""

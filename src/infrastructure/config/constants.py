@@ -4,9 +4,7 @@ from datetime import timedelta
 COLLECTIVE_DB = "07752fd5ba8e44c7b8e48bfee50f0545"
 
 # Discord Channel IDs
-NOTION_NOTIFICATION_CHANNELS = [
-    1191205161310363709
-]
+NOTION_NOTIFICATION_CHANNELS = [1191205161310363709]
 
 # Date Formats
 DATE_FMT = "%d %m %Y %H:%M"
@@ -25,5 +23,5 @@ DEFAULT_PAGE_SIZE = 50
 MESSAGE_TEMPLATES = {
     "creation": "🧬 {} 🧬",
     "update": "📡 {} Update 📡",
-    "weekly_summary": "📊 Weekly Summary 📊"
+    "weekly_summary": "📊 Weekly Summary 📊",
 }

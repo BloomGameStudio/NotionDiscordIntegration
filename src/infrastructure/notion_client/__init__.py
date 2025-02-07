@@ -1,1 +1,1 @@
-"""Notion API client implementation.""" 
+"""Notion API client implementation."""

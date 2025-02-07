@@ -1,1 +1,1 @@
-"""Infrastructure layer containing external service implementations.""" 
+"""Infrastructure layer containing external service implementations."""

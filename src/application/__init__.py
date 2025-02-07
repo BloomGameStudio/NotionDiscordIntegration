@@ -1,1 +1,1 @@
-"""Application layer containing business logic and use cases.""" 
+"""Application layer containing business logic and use cases."""
