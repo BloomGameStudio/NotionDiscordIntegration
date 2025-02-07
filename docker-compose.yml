@@ -10,7 +10,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://notion_bot:${DB_PASSWORD}@db:5432/notion_bot
     volumes:
-      - notion_bot_volume:/bot
+      - ./src:/app/src
+      - notion_volume:/app/data
 
   db:
     image: postgres:15-alpine
@@ -30,5 +31,5 @@ services:
       - postgres_volume:/var/lib/postgresql/data
 
 volumes:
-  notion_bot_volume:
+  notion_volume:
   postgres_volume:
