@@ -15,7 +15,6 @@ def get_database_url():
             raise ValueError("Either DATABASE_URL or DB_PASSWORD environment variable is required")
         database_url = f'postgresql+asyncpg://notion_bot:{db_password}@{db_host}:5432/notion_bot'
     
-    # Handle Heroku-style postgres:// URLs
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql+asyncpg://', 1)
     

@@ -99,21 +99,31 @@ class NotionClient:
         """Fetch recently updated documents"""
         try:
             logger.debug("Querying Notion database for updates...")
-            response = await self.retry_async(
-                self.client.databases.query,
-                database_id=self.database_id,
-                page_size=50,  # Limit results
-                sorts=[{
-                    "timestamp": "last_edited_time",
-                    "direction": "descending"
-                }]
-            )
-            
-            logger.debug(f"Received {len(response['results'])} results from Notion")
-            return [
-                NotionDocument.from_api_response(page)
-                for page in response["results"]
-            ]
+            documents = []
+            has_more = True
+            start_cursor = None
+
+            while has_more:
+                response = await self.retry_async(
+                    self.client.databases.query,
+                    database_id=self.database_id,
+                    start_cursor=start_cursor,
+                    sorts=[{
+                        "timestamp": "last_edited_time",
+                        "direction": "descending"
+                    }]
+                )
+                
+                documents.extend([
+                    NotionDocument.from_api_response(page)
+                    for page in response["results"]
+                ])
+                
+                has_more = response["has_more"]
+                start_cursor = response["next_cursor"]
+
+            logger.debug(f"Received total of {len(documents)} results from Notion")
+            return documents
         except Exception as e:
             logger.error(f"Error fetching updated documents: {e}")
             return []
@@ -128,10 +138,9 @@ class NotionClient:
                 self.client.users.retrieve,
                 user_id=user_id
             )
-            # Cache the entire user object
             self._user_cache[user_id] = user.get('name', 'Unknown User')
             return self._user_cache[user_id]
         except Exception as e:
             logger.debug(f"Could not fetch user {user_id}, using ID as name: {e}")
-            self._user_cache[user_id] = user_id[:8]  # Use first 8 chars of ID as name
+            self._user_cache[user_id] = user_id[:8]
             return self._user_cache[user_id] 

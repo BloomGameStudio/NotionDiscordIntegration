@@ -13,65 +13,21 @@ class DiscordService:
         self,
         notion_service: NotionService,
         settings: Settings,
+        client: discord.Client = None,
         check_interval: int = 120
     ):
         self.notion_service = notion_service
         self.settings = settings
+        self.client = client
         self.connected_channels: List[int] = []
         self._start_time = datetime.now(timezone.utc)
         self._last_heartbeat = datetime.utcnow()
         self._db_lock = asyncio.Lock()
         self.check_interval = check_interval
-        
-        # Create Discord client
-        intents = discord.Intents.default()
-        intents.message_content = True
-        self.client = discord.Client(intents=intents)
-        
-        @self.client.event
-        async def on_ready():
-            logger.info(f'Bot is ready as {self.client.user}')
-            
-            # Register notification channels
-            for channel_id in self.settings.NOTION_NOTIFICATION_CHANNELS:
-                channel = self.client.get_channel(channel_id)
-                if channel:
-                    self.register_channel(channel_id)
-                else:
-                    logger.warning(f"Could not find channel with ID: {channel_id}")
-            
-            # Setup and start periodic tasks
-            self._setup_periodic_tasks()
-            await self.start()
-        
+
     def _setup_periodic_tasks(self):
-        @tasks.loop(seconds=120)
-        async def check_updates():
-            logger.info("Checking for document updates...")
-            notifications = await self.handle_update_notifications()
-            logger.info(f"Found {len(notifications)} updates")
-            for notification in notifications:
-                await self._send_notification(notification)
-
-        @tasks.loop(seconds=120)
-        async def check_creations():
-            logger.info("Checking for new documents...")
-            notifications = await self.handle_creation_notifications()
-            logger.info(f"Found {len(notifications)} new documents")
-            for notification in notifications:
-                await self._send_notification(notification)
-
-        @tasks.loop(hours=24)
-        async def check_weekly_updates():
-            logger.info("Checking for weekly updates...")
-            notification = await self.handle_aggregate_updates()
-            if notification:
-                logger.info("Sending weekly update summary")
-                await self._send_notification(notification)
-
-        self.check_updates = check_updates
-        self.check_creations = check_creations
-        self.check_weekly_updates = check_weekly_updates
+        """This method should be removed as task scheduling is handled by DiscordClient"""
+        pass
 
     def register_channel(self, channel_id: int) -> None:
         """Register a Discord channel for notifications"""
@@ -80,13 +36,19 @@ class DiscordService:
             logger.info(f"Registered channel: {channel_id}")
 
     async def initialize(self) -> None:
-        """Initialize service and perform initial database sync"""
+        """Initialize service"""
         try:
-            async with self._db_lock:
-                await self.notion_service.sync_db()
-            logger.info("Initial database sync completed")
+            if not self.client.is_ready():
+                logger.info("Waiting for Discord client to be ready...")
+                await self.client.wait_until_ready()
+            
+            for channel_id in self.notion_service.notification_channels:
+                self.register_channel(channel_id)
+                logger.info(f"Pre-registered channel: {channel_id}")
+            
+            logger.info("Discord service initialization completed")
         except Exception as e:
-            logger.error(f"Error during initialization: {e}")
+            logger.error(f"Error during initialization: {e}", exc_info=True)
             raise
 
     async def handle_creation_notifications(self) -> List[NotificationMessage]:
@@ -110,7 +72,7 @@ class DiscordService:
     async def handle_aggregate_updates(self) -> Optional[NotificationMessage]:
         """Handle weekly aggregate updates"""
         try:
-            current_time = datetime.now(timezone.utc)  # Make timezone-aware
+            current_time = datetime.now(timezone.utc)
             time_difference = current_time - self._start_time
             
             if time_difference.days >= 7:
@@ -165,34 +127,35 @@ class DiscordService:
             "uptime": str(datetime.utcnow() - self._start_time)
         }
 
-    @tasks.loop(minutes=5)
-    async def check_updates(self):
-        """Check for Notion updates periodically"""
-        try:
-            notifications = await self.notion_service.handle_updates()
-            for notification in notifications:
-                for channel_id in notification.channels:
-                    channel = self.client.get_channel(channel_id)
-                    if channel:
-                        await channel.send(
-                            content=notification.content,
-                            embed=notification.to_discord_embed()
-                        )
-        except Exception as e:
-            logger.error(f"Error checking updates: {e}")
-
-    async def start(self) -> None:
-        """Start the periodic tasks"""
-        self.check_updates.start()
-        self.check_creations.start()
-        self.check_weekly_updates.start()
-
     async def _send_notification(self, notification: NotificationMessage):
         """Send a notification to all connected channels"""
+        logger.debug(f"Attempting to send notification to channels: {self.connected_channels}")
+        if not self.connected_channels:
+            logger.warning("No channels registered to receive notifications")
+            return
+        
+        formatted_message = f"**{notification.title}**\n{notification.content}"
+        
         for channel_id in self.connected_channels:
             channel = self.client.get_channel(channel_id)
             if channel:
-                await channel.send(
-                    content=notification.content,
-                    embed=notification.to_discord_embed()
-                ) 
+                try:
+                    await channel.send(content=formatted_message)
+                    logger.info(f"Successfully sent notification to channel {channel_id}")
+                except Exception as e:
+                    logger.error(f"Error sending message to channel {channel_id}: {e}")
+            else:
+                logger.warning(f"Could not find channel with ID: {channel_id}")
+
+    async def send_message(self, channel_id: int, title: str, content: str):
+        """Send a message to a specific channel"""
+        channel = self.client.get_channel(channel_id)
+        if channel:
+            try:
+                message = f"**{title}**\n{content}"
+                await channel.send(content=message)
+                logger.info(f"Successfully sent message to channel {channel_id}")
+            except Exception as e:
+                logger.error(f"Error sending message to channel {channel_id}: {e}")
+        else:
+            logger.warning(f"Could not find channel with ID: {channel_id}") 

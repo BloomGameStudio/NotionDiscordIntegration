@@ -1,11 +1,22 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
+from src.utils.notion_utils import extract_title
 
 @dataclass
 class NotionUser:
     id: str
-    object: str = "user"
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> 'NotionUser':
+        """Create a NotionUser from API response data"""
+        return cls(
+            id=data['id'],
+            name=data.get('name', 'Unknown User'),
+            avatar_url=data.get('avatar_url')
+        )
 
 @dataclass
 class NotionDocument:
@@ -28,9 +39,9 @@ class NotionDocument:
             object=data["object"],
             created_time=datetime.fromisoformat(data["created_time"].replace('Z', '+00:00')),
             last_edited_time=datetime.fromisoformat(data["last_edited_time"].replace('Z', '+00:00')),
-            created_by=NotionUser(**data["created_by"]),
-            last_edited_by=NotionUser(**data["last_edited_by"]),
-            title=data.get("title", "Untitled"),
+            created_by=NotionUser.from_api_response(data["created_by"]),
+            last_edited_by=NotionUser.from_api_response(data["last_edited_by"]),
+            title=extract_title(data),
             url=data.get("url"),
             archived=data.get("archived", False),
             properties=data.get("properties", {})

@@ -15,98 +15,143 @@ from src.infrastructure.database.models import (
     NotionDocumentVersionModel
 )
 from src.infrastructure.config.database import create_session
+from src.utils.notion_utils import extract_title
+
+def extract_clean_title(page: dict) -> str:
+    """Extract clean title without IDs from page data"""
+    # Try properties first
+    if 'properties' in page:
+        for prop_name in ['Page', 'Name', 'Title']:
+            if prop_name in page['properties']:
+                title_prop = page['properties'][prop_name].get('title', [])
+                if title_prop and isinstance(title_prop, list):
+                    plain_text = title_prop[0].get('plain_text', '').strip()
+                    # Remove any trailing alphanumeric strings that look like IDs
+                    if plain_text:
+                        parts = plain_text.split()
+                        if len(parts[-1]) == 32 and parts[-1].isalnum():
+                            plain_text = ' '.join(parts[:-1])
+                        return plain_text
+
+    # Try root title
+    if 'title' in page:
+        title_array = page['title']
+        if isinstance(title_array, list) and title_array:
+            title = title_array[0].get('plain_text', '').strip()
+            if title:
+                return title
+
+    # Last resort
+    return "Untitled Document"
 
 async def migrate_data(data=None, session_factory=None):
-    """Migrate data to the database"""
+    """Migrate data from JSON to database"""
     if session_factory is None:
         session_factory = create_session()
     
     if data is None:
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        json_path = os.path.join(project_root, 'db.json')
-        with open(json_path, 'r') as f:
-            raw_data = json.load(f)
-            if "_default" in raw_data:
-                data = [doc for doc in raw_data["_default"].values() 
-                       if doc.get("object") == "page"]
-            else:
-                data = []
-    
-    engine = session_factory.kw['bind']
-    async with engine.begin() as conn:
-        # Drop all tables first
-        await conn.run_sync(Base.metadata.drop_all)
-        # Then create them again with the new schema
-        await conn.run_sync(Base.metadata.create_all)
+        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'db.json')
+        try:
+            with open(json_path, 'r') as f:
+                raw_data = json.load(f)
+                if isinstance(raw_data, dict) and "_default" in raw_data:
+                    data = list(raw_data["_default"].values())
+                else:
+                    data = raw_data
+        except json.JSONDecodeError:
+            raise ValueError("Invalid JSON in db.json")
     
     async with session_factory() as session:
         async with session.begin():
-            # First, create users
+            # First, collect and create all users
             users = set()
             for page in data:
-                for user_field in ['created_by', 'last_edited_by']:
-                    if user_data := page.get(user_field):
-                        user_id = user_data.get('id')
-                        if user_id and user_id not in users:
-                            users.add(user_id)  # Add to set to prevent duplicates
-                            user = NotionUserModel(
-                                id=user_id,
-                                name=user_data.get('name', ''),
-                                type='person'
-                            )
-                            session.add(user)
+                if page.get('object') != 'page':
+                    continue
+                
+                created_by = page.get('created_by', {})
+                last_edited_by = page.get('last_edited_by', {})
+                
+                if created_by and 'id' in created_by:
+                    users.add((
+                        created_by['id'],
+                        created_by.get('name', 'Unknown'),
+                        created_by.get('avatar_url', '')
+                    ))
+                if last_edited_by and 'id' in last_edited_by:
+                    users.add((
+                        last_edited_by['id'],
+                        last_edited_by.get('name', 'Unknown'),
+                        last_edited_by.get('avatar_url', '')
+                    ))
             
-            await session.flush()  # Ensure users are created before documents
+            # Create users
+            for user_id, name, avatar_url in users:
+                user = NotionUserModel(
+                    id=user_id,
+                    name=name,
+                    avatar_url=avatar_url
+                )
+                session.add(user)
             
-            # Then process documents
-            processed_docs = set()
+            # Track documents and their versions
+            document_versions = {}  # doc_id -> list of page versions
+
+            # First pass - collect all versions
             for page in data:
+                if page.get('object') != 'page':
+                    continue
+                
                 if not all(key in page for key in ['id', 'created_time', 'last_edited_time']):
-                    raise ValueError("Missing required fields in document data")
+                    continue
                 
                 doc_id = page['id']
-                title = page.get('title', '')
+                if doc_id not in document_versions:
+                    document_versions[doc_id] = []
+                document_versions[doc_id].append(page)
+
+            # Now process documents and their versions
+            for doc_id, versions in document_versions.items():
+                # Sort versions by last_edited_time
+                versions.sort(key=lambda x: datetime.fromisoformat(x['last_edited_time'].replace('Z', '+00:00')))
                 
-                # Extract title - first try direct title, then properties
-                if not title and 'properties' in page and 'Page' in page['properties']:
-                    title_parts = page['properties']['Page'].get('title', [])
-                    if title_parts:
-                        title = title_parts[0].get('plain_text', '')
+                # Use latest version for the main document
+                latest_version = versions[-1]
+                title = extract_clean_title(latest_version)
                 
-                if doc_id not in processed_docs:
-                    doc = NotionDocumentModel(
-                        id=doc_id,
-                        object=page.get('object', 'page'),
-                        created_time=datetime.fromisoformat(page['created_time'].replace('Z', '+00:00')),
-                        last_edited_time=datetime.fromisoformat(page['last_edited_time'].replace('Z', '+00:00')),
-                        created_by_id=page.get('created_by', {}).get('id'),
-                        last_edited_by_id=page.get('last_edited_by', {}).get('id'),
-                        title=title,
-                        url=page.get('url', ''),
-                        archived=page.get('archived', False),
-                        properties=page.get('properties', {})
-                    )
-                    session.add(doc)
-                    processed_docs.add(doc_id)
-                
-                version = NotionDocumentVersionModel(
-                    id=str(uuid.uuid4()),
-                    document_id=doc_id,
-                    object=page.get('object', 'page'),
-                    created_time=datetime.fromisoformat(page['created_time'].replace('Z', '+00:00')),
-                    last_edited_time=datetime.fromisoformat(page['last_edited_time'].replace('Z', '+00:00')),
-                    created_by_id=page.get('created_by', {}).get('id'),
-                    last_edited_by_id=page.get('last_edited_by', {}).get('id'),
+                # Create the main document
+                doc = NotionDocumentModel(
+                    id=doc_id,
+                    object=latest_version.get('object', 'page'),
+                    created_time=datetime.fromisoformat(versions[0]['created_time'].replace('Z', '+00:00')),
+                    last_edited_time=datetime.fromisoformat(latest_version['last_edited_time'].replace('Z', '+00:00')),
+                    created_by_id=latest_version.get('created_by', {}).get('id'),
+                    last_edited_by_id=latest_version.get('last_edited_by', {}).get('id'),
                     title=title,
-                    url=page.get('url', ''),
-                    archived=page.get('archived', False),
-                    properties=page.get('properties', {})
+                    url=latest_version.get('url', ''),
+                    archived=latest_version.get('archived', False),
+                    properties=latest_version.get('properties', {})
                 )
-                session.add(version)
-                print(f"Processed document and version: {title or doc_id}")
-            
-            # Final commit
-            await session.commit()
+                session.add(doc)
+                
+                # Create all versions
+                for version in versions:
+                    version_title = extract_clean_title(version)
+                    version_record = NotionDocumentVersionModel(
+                        document_id=doc_id,
+                        object=version.get('object', 'page'),
+                        created_time=datetime.fromisoformat(version['created_time'].replace('Z', '+00:00')),
+                        last_edited_time=datetime.fromisoformat(version['last_edited_time'].replace('Z', '+00:00')),
+                        created_by_id=version.get('created_by', {}).get('id'),
+                        last_edited_by_id=version.get('last_edited_by', {}).get('id'),
+                        title=version_title,
+                        url=version.get('url', ''),
+                        archived=version.get('archived', False),
+                        properties=version.get('properties', {})
+                    )
+                    session.add(version_record)
+                
+                print(f"Processed document with {len(versions)} versions: {title}")
 
 if __name__ == "__main__":
     asyncio.run(migrate_data())

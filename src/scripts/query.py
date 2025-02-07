@@ -81,11 +81,11 @@ async def show_document_versions(doc_id=None):
         if doc_id:
             query = select(NotionDocumentVersionModel).where(
                 NotionDocumentVersionModel.document_id == doc_id
-            ).order_by(NotionDocumentVersionModel.version_created_at)
+            ).order_by(NotionDocumentVersionModel.created_time)
         else:
             query = select(NotionDocumentVersionModel).order_by(
                 NotionDocumentVersionModel.document_id,
-                NotionDocumentVersionModel.version_created_at
+                NotionDocumentVersionModel.created_time
             ).limit(10)
         
         result = await session.execute(query)
@@ -96,7 +96,8 @@ async def show_document_versions(doc_id=None):
         for v in versions:
             print(f"Document ID: {v.document_id}")
             print(f"Title: {v.title}")
-            print(f"Version Created: {v.version_created_at}")
+            print(f"Created Time: {v.created_time}")
+            print(f"Last Edited: {v.last_edited_time}")
             print("-" * 80)
 
 async def main():

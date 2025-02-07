@@ -20,74 +20,69 @@ class DiscordClient(discord.Client):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.discord_service = discord_service
         self.settings = settings
         self.tree = app_commands.CommandTree(self)
-        self.check_updates.start()
+        discord_service.client = self  # Pass the client instance
+        self.discord_service = discord_service
 
     async def setup_hook(self) -> None:
         """Set up background tasks when the bot starts"""
-        # Initialize services
-        await self.discord_service.initialize()
-        
-        # Start notification task
-        self.bg_task = self.loop.create_task(self._run_notification_loop())
-        
+        logger.info("Setting up Discord client...")
+        # Start the check_updates task after initialization
+        self.check_updates.start()
+        logger.info("Started check_updates task")
         logger.info("Discord client setup completed")
-
-    async def _run_notification_loop(self) -> None:
-        """Main notification processing loop"""
-        await self.wait_until_ready()
-        
-        async for notification in self.discord_service.start_notification_tasks():
-            for channel_id in notification.channels:
-                channel = self.get_channel(channel_id)
-                if channel:
-                    try:
-                        message = self.discord_service.format_notification(notification)
-                        await channel.send(message)
-                    except Exception as e:
-                        logger.error(f"Error sending message to channel {channel_id}: {e}")
 
     async def on_ready(self) -> None:
         """Called when the bot is ready"""
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         
-        # Register notification channels
+        # Register notification channels first
         for channel_id in self.settings.NOTION_NOTIFICATION_CHANNELS:
             channel = self.get_channel(channel_id)
             if channel:
                 self.discord_service.register_channel(channel_id)
+                logger.info(f"Successfully registered channel: {channel_id}")
             else:
                 logger.warning(f"Could not find channel with ID: {channel_id}")
+        
+        # Only initialize after channels are confirmed registered
+        if self.discord_service.connected_channels:
+            await self.discord_service.initialize()
+        else:
+            logger.error("No channels were registered successfully. Cannot initialize service.")
 
     @tasks.loop(minutes=2)
     async def check_updates(self):
         """Check for updates every 2 minutes"""
         try:
+            logger.info("Starting periodic update check...")
+            
             # Check for new documents
             creation_notifications = await self.discord_service.handle_creation_notifications()
+            logger.info(f"Found {len(creation_notifications)} new documents")
             for notification in creation_notifications:
-                for channel_id in notification.channels:
-                    channel = self.get_channel(channel_id)
-                    if channel:
-                        await channel.send(notification.content)
+                await self.discord_service._send_notification(notification)
 
             # Check for updates
             update_notifications = await self.discord_service.handle_update_notifications()
+            logger.info(f"Found {len(update_notifications)} updates")
             for notification in update_notifications:
-                for channel_id in notification.channels:
-                    channel = self.get_channel(channel_id)
-                    if channel:
-                        await channel.send(notification.content)
+                await self.discord_service._send_notification(notification)
 
             # Check for weekly summary
             aggregate_notification = await self.discord_service.handle_aggregate_updates()
             if aggregate_notification:
-                for channel_id in aggregate_notification.channels:
-                    channel = self.get_channel(channel_id)
-                    if channel:
-                        await channel.send(aggregate_notification.content)
+                logger.info("Sending weekly summary")
+                await self.discord_service._send_notification(aggregate_notification)
 
+            logger.info("Completed periodic update check")
         except Exception as e:
-            logger.error(f"Error checking updates: {e}") 
+            logger.error(f"Error in check_updates task: {e}", exc_info=True)
+
+    @check_updates.before_loop
+    async def before_check_updates(self):
+        """Wait until the bot is ready before starting the task"""
+        logger.info("Waiting for bot to be ready before starting check_updates task...")
+        await self.wait_until_ready()
+        logger.info("Bot is ready, starting check_updates task") 

@@ -8,38 +8,32 @@ from src.infrastructure.config.database import get_database_url
 @dataclass
 class Settings:
     """Application settings loaded from environment variables and constants"""
-    # API Tokens
     NOTION_TOKEN: str
     DISCORD_BOT_TOKEN: str
     
-    # Database Settings
     DATABASE_URL: str
     
-    # Notion Settings
     NOTION_DATABASE_ID: str
     NOTION_NOTIFICATION_CHANNELS: List[int]
     
-    # Application Settings
-    UPDATE_INTERVAL: int = 10  # seconds
-    AGGREGATE_UPDATE_INTERVAL: int = 60 * 60 * 24  # 24 hours
-    UPDATE_COOLDOWN: int = 14400  # 4 hours
+    UPDATE_INTERVAL: int = 10
+    AGGREGATE_UPDATE_INTERVAL: int = 60 * 60 * 24
+    UPDATE_COOLDOWN: int = 14400
     
     def __init__(self):
         load_dotenv()
         
-        # Load environment variables
         self.NOTION_TOKEN = os.getenv('NOTION_TOKEN')
         self.DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
         self.DATABASE_URL = get_database_url()
-        self.NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID', '07752fd5ba8e44c7b8e48bfee50f0545')  # Default from constants
+        self.NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID', '07752fd5ba8e44c7b8e48bfee50f0545')
         
-        # Parse notification channels
         channels_str = os.getenv('NOTION_NOTIFICATION_CHANNELS', '')
         self.NOTION_NOTIFICATION_CHANNELS = [
             int(channel.strip()) 
             for channel in channels_str.split(',')
             if channel.strip()
-        ] or NOTION_NOTIFICATION_CHANNELS  # Fallback to constants if empty
+        ] or NOTION_NOTIFICATION_CHANNELS
 
     @classmethod
     def load_from_env(cls) -> 'Settings':

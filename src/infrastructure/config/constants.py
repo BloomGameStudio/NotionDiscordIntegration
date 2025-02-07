@@ -23,7 +23,7 @@ DEFAULT_PAGE_SIZE = 50
 
 # Message Templates
 MESSAGE_TEMPLATES = {
-    "update": "📡**__{title} Update__**📡",
-    "creation": "🎉 **New Entry Created: {title}**",
-    "weekly_summary": "📊 **Weekly Notion Update Summary**"
-} 
+    "creation": "🧬 {} 🧬",
+    "update": "📡 {} Update 📡",
+    "weekly_summary": "📊 Weekly Summary 📊"
+}
