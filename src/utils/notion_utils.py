@@ -1,35 +1,22 @@
 def extract_title(page: dict) -> str:
-    """Extract title from page data with multiple fallback options"""
-    # Try direct title field first
-    if isinstance(page.get('title'), str):
-        return page['title']
-    
-    # Try properties.Page.title
+    """Extract clean title from page data"""
     if 'properties' in page:
-        page_prop = page['properties'].get('Page', {})
-        if page_prop and 'title' in page_prop and page_prop['title']:
-            try:
-                return page_prop['title'][0]['plain_text']
-            except (IndexError, KeyError):
-                pass
-        
-        # Try properties.Name.title as fallback
-        name_prop = page['properties'].get('Name', {})
-        if name_prop and 'title' in name_prop and name_prop['title']:
-            try:
-                return name_prop['title'][0]['plain_text']
-            except (IndexError, KeyError):
-                pass
-    
-    # Try to extract from URL if available
-    if page.get('url'):
-        try:
-            # Extract last part of URL and clean it
-            url_title = page['url'].split('/')[-1].replace('-', ' ').title()
-            if url_title:
-                return url_title
-        except Exception:
-            pass
-    
-    # Final fallback - use ID with prefix
-    return f"Untitled Page ({page['id'][:8]})"
+        for prop_name in ['Page', 'Name', 'Title']:
+            if prop_name in page['properties']:
+                title_prop = page['properties'][prop_name].get('title', [])
+                if title_prop and isinstance(title_prop, list):
+                    plain_text = title_prop[0].get('plain_text', '').strip()
+                    if plain_text:
+                        parts = plain_text.split()
+                        if len(parts[-1]) == 32 and parts[-1].isalnum():
+                            plain_text = ' '.join(parts[:-1])
+                        return plain_text
+
+    if 'title' in page:
+        title_array = page['title']
+        if isinstance(title_array, list) and title_array:
+            title = title_array[0].get('plain_text', '').strip()
+            if title:
+                return title
+
+    return "Untitled Document"

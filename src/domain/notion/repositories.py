@@ -67,18 +67,15 @@ class SQLNotionRepository(NotionRepository):
 
     async def save_user(self, user_data: dict):
         """Save or update a user in the database"""
-        # Check if user exists
         async with self.session_factory() as session:
             existing = await session.get(NotionUserModel, user_data['id'])
             
             if existing:
-                # Update existing user
                 existing.name = user_data.get('name', 'Unknown User')
                 existing.email = user_data.get('email')
                 existing.type = user_data.get('type', 'person')
                 existing.avatar_url = user_data.get('avatar_url')
             else:
-                # Create new user
                 user = NotionUserModel(
                     id=user_data['id'],
                     name=user_data.get('name', 'Unknown User'),
@@ -90,35 +87,29 @@ class SQLNotionRepository(NotionRepository):
             
             await session.commit()
 
+    async def _ensure_user_exists(self, session: AsyncSession, user: NotionUser) -> None:
+        """Ensure user exists in database"""
+        if not user:
+            return
+        
+        existing = await session.get(NotionUserModel, user.id)
+        if not existing:
+            user_model = NotionUserModel(
+                id=user.id,
+                name=user.name or 'Unknown User',
+                avatar_url=user.avatar_url
+            )
+            session.add(user_model)
+
     async def save_document(self, document: NotionDocument):
         """Save or update a document in the database"""
         async with self.session_factory() as session:
             async with session.begin():
-                # First ensure users exist
-                if document.created_by:
-                    created_user = await session.get(NotionUserModel, document.created_by.id)
-                    if not created_user:
-                        created_user = NotionUserModel(
-                            id=document.created_by.id,
-                            name=document.created_by.name,
-                            avatar_url=document.created_by.avatar_url
-                        )
-                        session.add(created_user)
+                await self._ensure_user_exists(session, document.created_by)
+                await self._ensure_user_exists(session, document.last_edited_by)
                 
-                if document.last_edited_by:
-                    edited_user = await session.get(NotionUserModel, document.last_edited_by.id)
-                    if not edited_user:
-                        edited_user = NotionUserModel(
-                            id=document.last_edited_by.id,
-                            name=document.last_edited_by.name,
-                            avatar_url=document.last_edited_by.avatar_url
-                        )
-                        session.add(edited_user)
-                
-                # Continue with existing document save logic...
                 existing = await session.get(NotionDocumentModel, document.id)
                 
-                # Always create a version record
                 version = NotionDocumentVersionModel(
                     document_id=document.id,
                     object=document.object,
@@ -134,7 +125,6 @@ class SQLNotionRepository(NotionRepository):
                 session.add(version)
                 
                 if existing:
-                    # Update existing document
                     existing.object = document.object
                     existing.created_time = document.created_time
                     existing.last_edited_time = document.last_edited_time
@@ -145,7 +135,6 @@ class SQLNotionRepository(NotionRepository):
                     existing.created_by_id = document.created_by.id if document.created_by else None
                     existing.last_edited_by_id = document.last_edited_by.id if document.last_edited_by else None
                 else:
-                    # Create new document
                     doc = NotionDocumentModel(
                         id=document.id,
                         object=document.object,
