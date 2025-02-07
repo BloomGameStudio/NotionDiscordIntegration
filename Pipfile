@@ -4,12 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"discord.py" = "*"
+discord-py = "*"
+aiohttp = "*"
+aiosqlite = "*"
+asyncpg = "*"
+python-dotenv = "*"
 notion-client = "*"
-tinydb = "*"
-python-dateutil = "*"
+"discord.py" = "*"
+pytest = "*"
+pytest-asyncio = "*"
+sqlalchemy = "*"
 
 [dev-packages]
-
-[requires]
-python_version = "3.10"
+pytest = "*"
+pytest-asyncio = "*"
