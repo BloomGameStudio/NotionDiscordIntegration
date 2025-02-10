@@ -23,8 +23,7 @@ def get_database_url():
 engine = None
 if os.getenv("ENV") != "TEST":
     url = get_database_url().replace("postgres://", "postgresql+asyncpg://", 1)
-    sanitized_url = url.split('@')[0].split(':')[0] + ':***@' + url.split('@')[1]
-    print(f"Connecting to {sanitized_url}")
+    print("Attempting to connect to the database...")
 
     engine = create_async_engine(
         url, pool_size=5, max_overflow=10, pool_timeout=30, pool_recycle=1800, echo=True
