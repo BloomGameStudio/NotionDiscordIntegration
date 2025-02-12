@@ -1,8 +1,8 @@
 import os
 import asyncio
 import discord
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 from src.infrastructure.config.settings import load_environment, Settings
 from src.infrastructure.database.models import Base
 from src.infrastructure.notion_client.client import NotionClient
@@ -13,14 +13,11 @@ from src.application.discord.discord_service import DiscordService
 from src.utils.logging import logger
 
 
-async def setup_discord_service(
+def setup_discord_service(
     settings: Settings, session_factory
 ) -> tuple[DiscordService, DiscordClient]:
     """Setup Discord service and client"""
-    engine = create_async_engine(settings.DATABASE_URL)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    engine = create_engine(settings.DATABASE_URL)
 
     notion_client = NotionClient(settings.NOTION_TOKEN, settings.NOTION_DATABASE_ID)
     notion_repository = SQLNotionRepository(session_factory)
@@ -53,14 +50,10 @@ async def main():
     try:
         settings = load_environment()
 
-        engine = create_async_engine(settings.DATABASE_URL)
-        async_session = sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
-        )
+        engine = create_engine(settings.DATABASE_URL)
+        session = sessionmaker(engine, class_=Session, expire_on_commit=False)
 
-        discord_service, discord_client = await setup_discord_service(
-            settings, async_session
-        )
+        discord_service, discord_client = setup_discord_service(settings, session)
 
         await discord_client.start(settings.DISCORD_BOT_TOKEN)
 

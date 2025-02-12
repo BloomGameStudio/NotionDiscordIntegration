@@ -109,7 +109,7 @@ If you need to migrate existing data to a new Heroku deployment:
 2. Verify your environment variables are set:
    ```bash
    # Local database connection
-   export DATABASE_URL=postgresql+asyncpg://notion_bot:your_local_password@localhost:5432/notion_bot
+   export DATABASE_URL=postgresql://notion_bot:your_local_password@localhost:5432/notion_bot
    ```
 
 3. Run the migration script:

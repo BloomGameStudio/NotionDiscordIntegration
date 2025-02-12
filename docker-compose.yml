@@ -8,7 +8,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://notion_bot:${DB_PASSWORD}@db:5432/notion_bot
+      - DATABASE_URL=postgresql://notion_bot:${DB_PASSWORD}@db:5432/notion_bot
     volumes:
       - ./src:/app/src
       - notion_volume:/app/data

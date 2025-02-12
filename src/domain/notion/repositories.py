@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.infrastructure.database.models import (
     NotionDocumentModel,
@@ -10,7 +9,7 @@ from src.infrastructure.database.models import (
 )
 from src.domain.notion.entities import NotionDocument, NotionUser
 import logging
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +95,7 @@ class SQLNotionRepository(NotionRepository):
             await session.commit()
 
     async def _ensure_user_exists(
-        self, session: AsyncSession, user: NotionUser
+        self, session: Session, user: NotionUser
     ) -> None:
         """Ensure user exists in database"""
         if not user:

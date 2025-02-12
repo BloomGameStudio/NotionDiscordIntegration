@@ -2,15 +2,10 @@
 import asyncio
 import json
 import os
-from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-import uuid
+from datetime import datetime
 from src.infrastructure.database.models import (
-    Base,
     NotionDocumentModel,
     NotionUserModel,
-    NotionStateModel,
     NotionDocumentVersionModel,
 )
 from src.infrastructure.config.database import create_session

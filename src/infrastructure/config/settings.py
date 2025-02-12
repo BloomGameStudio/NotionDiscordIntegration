@@ -44,7 +44,7 @@ class Settings:
         """Load settings from environment variables"""
         database_url = os.getenv(
             "DATABASE_URL",
-            "postgresql+asyncpg://notion_bot:notion_bot@localhost:5432/notion_bot",
+            "postgresql://notion_bot:notion_bot@localhost:5432/notion_bot",
         )
 
         return cls(

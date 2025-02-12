@@ -4,16 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-discord-py = ">=2.0.0"
-sqlalchemy = ">=2.0.0"
-asyncpg = "*"
-python-dotenv = ">=0.19.0"
-aiosqlite = ">=0.17.0"
+discord-py = "*"
+sqlalchemy = "*"
+python-dotenv = "*"
 notion-client = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 black = "*"
 flake8 = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"

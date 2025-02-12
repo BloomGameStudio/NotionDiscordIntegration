@@ -1,6 +1,6 @@
 import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 
 def get_database_url():
@@ -22,11 +22,17 @@ def get_database_url():
 # Create async engine
 engine = None
 if os.getenv("ENV") != "TEST":
-    url = get_database_url().replace("postgres://", "postgresql+asyncpg://", 1)
+    url = get_database_url().replace("postgres://", "postgresql+psycopg2://", 1)
+
     print("Attempting to connect to the database...")
 
-    engine = create_async_engine(
-        url, pool_size=5, max_overflow=10, pool_timeout=30, pool_recycle=1800, echo=True
+    engine = create_engine(
+        url,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30,
+        pool_recycle=1800,
+        echo=True,
     )
 
 Base = declarative_base()
@@ -36,7 +42,7 @@ def create_session():
     """Create database session"""
     if engine is None:
         raise RuntimeError("Database engine not initialized")
-    return sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return sessionmaker(engine, class_=Session, expire_on_commit=False)
 
 
 async def verify_database():
