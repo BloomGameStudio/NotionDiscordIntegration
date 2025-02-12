@@ -1,11 +1,35 @@
 version: '3'
 services:
   bot:
-    image: ghcr.io/bloomgamestudio/notiondiscordintegration:main
+    build: .
     restart: unless-stopped
     env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://notion_bot:${DB_PASSWORD}@db:5432/notion_bot
     volumes:
-      - notion_bot_volume:/bot
+      - ./src:/app/src
+      - notion_volume:/app/data
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=notion_bot
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=notion_bot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notion_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
 
 volumes:
-  notion_bot_volume:
+  notion_volume:
+  postgres_volume:
