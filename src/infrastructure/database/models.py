@@ -18,14 +18,14 @@ Base = declarative_base()
 
 # Association tables for many-to-many relationships
 document_creators = Table(
-    "document_creators",
+    "notion_document_creators",
     Base.metadata,
     Column("document_id", String(255), ForeignKey("notion_documents.id")),
     Column("user_id", String(255), ForeignKey("notion_users.id")),
 )
 
 document_assignees = Table(
-    "document_assignees",
+    "notion_document_assignees",
     Base.metadata,
     Column("document_id", String(255), ForeignKey("notion_documents.id")),
     Column("user_id", String(255), ForeignKey("notion_users.id")),
@@ -85,9 +85,9 @@ class NotionDocumentModel(Base):
             created_time=entity.created_time,
             last_edited_time=entity.last_edited_time,
             created_by_id=entity.created_by.id if entity.created_by else None,
-            last_edited_by_id=entity.last_edited_by.id
-            if entity.last_edited_by
-            else None,
+            last_edited_by_id=(
+                entity.last_edited_by.id if entity.last_edited_by else None
+            ),
             title=entity.title,
             url=entity.url,
             archived=entity.archived,
