@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy import select, inspect, func
 
@@ -13,16 +12,16 @@ from src.infrastructure.database.models import (
 from src.infrastructure.config.database import create_session
 
 
-async def query_documents(days_ago: int = 7):
+def query_documents(days_ago: int = 7):
     """Query documents modified in the last X days"""
-    async_session = create_session()
+    session_factory = create_session()
     try:
-        async with async_session() as session:
-            cutoff_date = datetime.utcnow() - timedelta(days=days_ago)
+        with session_factory() as session:
+            cutoff_date = datetime.now(datetime.UTC) - timedelta(days=days_ago)
             stmt = select(NotionDocumentModel).where(
                 NotionDocumentModel.last_edited_time >= cutoff_date
             )
-            result = await session.execute(stmt)
+            result = session.execute(stmt)
             documents = result.scalars().all()
 
             print(f"\nDocuments modified in the last {days_ago} days:")
@@ -39,47 +38,43 @@ async def query_documents(days_ago: int = 7):
         raise
 
 
-async def show_all_tables():
+def show_all_tables():
     """Show all tables in the database"""
     session_factory = create_session()
     engine = session_factory.kw["bind"]
 
     print("\nDatabase Tables:")
-    async with engine.begin() as conn:
-
-        def get_tables(connection):
-            inspector = inspect(connection)
-            return inspector.get_table_names()
-
-        tables = await conn.run_sync(get_tables)
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+        tables = inspector.get_table_names()
         for table_name in tables:
             print(f"  - {table_name}")
 
 
-async def show_document_count():
+def show_document_count():
     """Show count of documents"""
     session_factory = create_session()
-    async with session_factory() as session:
-        doc_count = await session.scalar(
+    with session_factory() as session:
+        doc_count = session.scalar(
             select(func.count()).select_from(NotionDocumentModel)
         )
-        version_count = await session.scalar(
+        version_count = session.scalar(
             select(func.count()).select_from(NotionDocumentVersionModel)
         )
         print(f"\nDocument Count: {doc_count}")
         print(f"Version Count: {version_count}")
 
 
-async def show_recent_documents():
+def show_recent_documents():
     """Show most recent documents"""
     session_factory = create_session()
-    async with session_factory() as session:
+    with session_factory() as session:
         query = (
             select(NotionDocumentModel)
             .order_by(NotionDocumentModel.last_edited_time.desc())
             .limit(5)
         )
-        result = await session.execute(query)
+        result = session.execute(query)
         documents = result.scalars().all()
 
         print("\nMost Recent Documents:")
@@ -91,10 +86,10 @@ async def show_recent_documents():
             print("-" * 80)
 
 
-async def show_document_versions(doc_id=None):
+def show_document_versions(doc_id=None):
     """Show versions of documents"""
     session_factory = create_session()
-    async with session_factory() as session:
+    with session_factory() as session:
         if doc_id:
             query = (
                 select(NotionDocumentVersionModel)
@@ -111,7 +106,7 @@ async def show_document_versions(doc_id=None):
                 .limit(10)
             )
 
-        result = await session.execute(query)
+        result = session.execute(query)
         versions = result.scalars().all()
 
         print("\nDocument Versions:")
@@ -124,13 +119,13 @@ async def show_document_versions(doc_id=None):
             print("-" * 80)
 
 
-async def main():
+def main():
     """Main function to show database information"""
-    await show_all_tables()
-    await show_document_count()
-    await show_recent_documents()
-    await show_document_versions()
+    show_all_tables()
+    show_document_count()
+    show_recent_documents()
+    show_document_versions()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import asyncio
 import json
 import os
 from datetime import datetime
@@ -36,7 +35,7 @@ def extract_clean_title(page: dict) -> str:
     return "Untitled Document"
 
 
-async def migrate_data(data=None, session_factory=None):
+def migrate_data(data=None, session_factory=None):
     """Migrate data from JSON to database"""
     if session_factory is None:
         session_factory = create_session()
@@ -55,8 +54,8 @@ async def migrate_data(data=None, session_factory=None):
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON in db.json")
 
-    async with session_factory() as session:
-        async with session.begin():
+    with session_factory() as session:
+        with session.begin():
             users = set()
             for page in data:
                 if page.get("object") != "page":
@@ -143,4 +142,4 @@ async def migrate_data(data=None, session_factory=None):
 
 
 if __name__ == "__main__":
-    asyncio.run(migrate_data())
+    migrate_data()
