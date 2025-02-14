@@ -38,7 +38,7 @@ class NotionService:
     async def handle_creations(self) -> List[NotificationMessage]:
         """Handle notifications for newly created documents"""
         try:
-            documents = self.notion_client.get_recent_documents()
+            documents = await self.notion_client.get_recent_documents()
             notifications = []
 
             for doc in documents:
