@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import select
+from sqlalchemy.orm import sessionmaker, Session
 from src.infrastructure.database.models import (
     NotionDocumentModel,
     NotionUserModel,
@@ -9,22 +10,21 @@ from src.infrastructure.database.models import (
 )
 from src.domain.notion.entities import NotionDocument, NotionUser
 import logging
-from sqlalchemy.orm import sessionmaker, Session
 
 logger = logging.getLogger(__name__)
 
 
 class NotionRepository(ABC):
     @abstractmethod
-    async def get_all(self) -> List[NotionDocument]:
+    def get_all(self) -> List[NotionDocument]:
         pass
 
     @abstractmethod
-    async def get_by_id(self, id: str) -> Optional[NotionDocument]:
+    def get_by_id(self, id: str) -> Optional[NotionDocument]:
         pass
 
     @abstractmethod
-    async def save(self, document: NotionDocument) -> None:
+    def save(self, document: NotionDocument) -> None:
         pass
 
 
@@ -32,39 +32,37 @@ class SQLNotionRepository(NotionRepository):
     def __init__(self, session_factory: sessionmaker):
         self.session_factory = session_factory
 
-    async def get_all(self) -> List[NotionDocument]:
-        async with self.session_factory() as session:
-            result = await session.execute(select(NotionDocumentModel))
+    def get_all(self) -> List[NotionDocument]:
+        with self.session_factory() as session:
+            result = session.execute(select(NotionDocumentModel))
             return [doc.to_entity() for doc in result.scalars().all()]
 
-    async def get_by_id(self, id: str) -> Optional[NotionDocument]:
-        async with self.session_factory() as session:
-            result = await session.execute(
+    def get_by_id(self, id: str) -> Optional[NotionDocument]:
+        with self.session_factory() as session:
+            result = session.execute(
                 select(NotionDocumentModel).where(NotionDocumentModel.id == id)
             )
             db_doc = result.scalar_one_or_none()
             return db_doc.to_entity() if db_doc else None
 
-    async def save(self, document: NotionDocument) -> None:
-        async with self.session_factory() as session:
+    def save(self, document: NotionDocument) -> None:
+        with self.session_factory() as session:
             db_doc = NotionDocumentModel.from_entity(document)
             session.add(db_doc)
-            await session.commit()
+            session.commit()
 
-    async def get_documents_updated_since(
-        self, timestamp: datetime
-    ) -> List[NotionDocument]:
-        async with self.session_factory() as session:
-            result = await session.execute(
+    def get_documents_updated_since(self, timestamp: datetime) -> List[NotionDocument]:
+        with self.session_factory() as session:
+            result = session.execute(
                 select(NotionDocumentModel)
                 .where(NotionDocumentModel.last_edited_time > timestamp)
                 .order_by(NotionDocumentModel.last_edited_time)
             )
             return [doc.to_entity() for doc in result.scalars().all()]
 
-    async def get_last_update_time(self, document_id: str) -> Optional[datetime]:
-        async with self.session_factory() as session:
-            result = await session.execute(
+    def get_last_update_time(self, document_id: str) -> Optional[datetime]:
+        with self.session_factory() as session:
+            result = session.execute(
                 select(NotionDocumentModel.last_edited_time)
                 .where(NotionDocumentModel.id == document_id)
                 .order_by(NotionDocumentModel.last_edited_time.desc())
@@ -72,10 +70,10 @@ class SQLNotionRepository(NotionRepository):
             )
             return result.scalar_one_or_none()
 
-    async def save_user(self, user_data: dict):
+    def save_user(self, user_data: dict):
         """Save or update a user in the database"""
-        async with self.session_factory() as session:
-            existing = await session.get(NotionUserModel, user_data["id"])
+        with self.session_factory() as session:
+            existing = session.get(NotionUserModel, user_data["id"])
 
             if existing:
                 existing.name = user_data.get("name", "Unknown User")
@@ -92,42 +90,40 @@ class SQLNotionRepository(NotionRepository):
                 )
                 session.add(user)
 
-            await session.commit()
+            session.commit()
 
-    async def _ensure_user_exists(
-        self, session: Session, user: NotionUser
-    ) -> None:
+    def _ensure_user_exists(self, session: Session, user: NotionUser) -> None:
         """Ensure user exists in database"""
         if not user:
             return
 
-        existing = await session.get(NotionUserModel, user.id)
+        existing = session.get(NotionUserModel, user.id)
         if not existing:
             user_model = NotionUserModel(
                 id=user.id, name=user.name or "Unknown User", avatar_url=user.avatar_url
             )
             session.add(user_model)
 
-    async def save_document(self, document: NotionDocument):
+    def save_document(self, document: NotionDocument):
         """Save or update a document in the database"""
-        async with self.session_factory() as session:
-            async with session.begin():
-                await self._ensure_user_exists(session, document.created_by)
-                await self._ensure_user_exists(session, document.last_edited_by)
+        with self.session_factory() as session:
+            with session.begin():
+                self._ensure_user_exists(session, document.created_by)
+                self._ensure_user_exists(session, document.last_edited_by)
 
-                existing = await session.get(NotionDocumentModel, document.id)
+                existing = session.get(NotionDocumentModel, document.id)
 
                 version = NotionDocumentVersionModel(
                     document_id=document.id,
                     object=document.object,
                     created_time=document.created_time,
                     last_edited_time=document.last_edited_time,
-                    created_by_id=document.created_by.id
-                    if document.created_by
-                    else None,
-                    last_edited_by_id=document.last_edited_by.id
-                    if document.last_edited_by
-                    else None,
+                    created_by_id=(
+                        document.created_by.id if document.created_by else None
+                    ),
+                    last_edited_by_id=(
+                        document.last_edited_by.id if document.last_edited_by else None
+                    ),
                     title=document.title,
                     url=document.url,
                     archived=document.archived,
@@ -155,12 +151,14 @@ class SQLNotionRepository(NotionRepository):
                         object=document.object,
                         created_time=document.created_time,
                         last_edited_time=document.last_edited_time,
-                        created_by_id=document.created_by.id
-                        if document.created_by
-                        else None,
-                        last_edited_by_id=document.last_edited_by.id
-                        if document.last_edited_by
-                        else None,
+                        created_by_id=(
+                            document.created_by.id if document.created_by else None
+                        ),
+                        last_edited_by_id=(
+                            document.last_edited_by.id
+                            if document.last_edited_by
+                            else None
+                        ),
                         title=document.title,
                         url=document.url,
                         archived=document.archived,
@@ -168,15 +166,15 @@ class SQLNotionRepository(NotionRepository):
                     )
                     session.add(doc)
 
-                await session.commit()
+                session.commit()
                 logger.info(
                     f"Successfully saved document and version: {document.title}"
                 )
 
-    async def get_document(self, document_id: str) -> Optional[NotionDocument]:
+    def get_document(self, document_id: str) -> Optional[NotionDocument]:
         """Get a document by ID"""
-        async with self.session_factory() as session:
-            result = await session.get(NotionDocumentModel, document_id)
+        with self.session_factory() as session:
+            result = session.get(NotionDocumentModel, document_id)
             if not result:
                 return None
 
@@ -193,15 +191,13 @@ class SQLNotionRepository(NotionRepository):
                 properties=result.properties,
             )
 
-    async def get_documents_updated_since(
-        self, since: datetime
-    ) -> List[NotionDocument]:
+    def get_documents_updated_since(self, since: datetime) -> List[NotionDocument]:
         """Get all documents updated since a given time"""
         stmt = select(NotionDocumentModel).where(
             NotionDocumentModel.last_edited_time >= since
         )
-        async with self.session_factory() as session:
-            result = await session.execute(stmt)
+        with self.session_factory() as session:
+            result = session.execute(stmt)
             documents = result.scalars().all()
 
             return [

@@ -38,11 +38,11 @@ class NotionService:
     async def handle_creations(self) -> List[NotificationMessage]:
         """Handle notifications for newly created documents"""
         try:
-            documents = await self.notion_client.get_recent_documents()
+            documents = self.notion_client.get_recent_documents()
             notifications = []
 
             for doc in documents:
-                existing_doc = await self.notion_repository.get_document(doc.id)
+                existing_doc = self.notion_repository.get_document(doc.id)
                 if not existing_doc:
                     title = (
                         doc.title[0]["plain_text"]
@@ -52,7 +52,7 @@ class NotionService:
                     doc.title = title  # Update the document title
 
                     logger.info(f"Saving new document to database: {title}")
-                    await self.notion_repository.save_document(doc)
+                    self.notion_repository.save_document(doc)
 
                     created_by = await self._get_user_safely(doc.created_by.id)
                     logger.info(f"Creating notification for new document: {title}")
@@ -96,7 +96,7 @@ class NotionService:
                         logger.debug(f"Skipping update for {title} due to cooldown")
                         continue
 
-                existing_doc = await self.notion_repository.get_document(doc.id)
+                existing_doc = self.notion_repository.get_document(doc.id)
                 if existing_doc:
                     has_changes = (
                         doc.title != existing_doc.title
@@ -107,7 +107,7 @@ class NotionService:
                     if has_changes:
                         logger.info(f"Update detected for document: {title}")
                         edited_by = await self._get_user_safely(doc.last_edited_by.id)
-                        await self.notion_repository.save_document(doc)
+                        self.notion_repository.save_document(doc)
 
                         self._last_update_times[doc.id] = current_time
 
@@ -137,9 +137,7 @@ class NotionService:
                     return None
 
             self._last_update_times[doc.id] = current_time
-            last_known_update = await self.notion_repository.get_last_update_time(
-                doc.id
-            )
+            last_known_update = self.notion_repository.get_last_update_time(doc.id)
 
             if not last_known_update or doc.last_edited_time > last_known_update:
                 title = (
@@ -150,7 +148,7 @@ class NotionService:
                 doc.title = title
 
                 logger.info(f"Saving updated document to database: {title}")
-                await self.notion_repository.save_document(doc)
+                self.notion_repository.save_document(doc)
 
                 edited_by = await self._get_user_safely(doc.last_edited_by.id)
 
@@ -180,7 +178,7 @@ class NotionService:
     ) -> Optional[NotificationMessage]:
         """Handle weekly aggregate updates"""
         try:
-            updated_docs = await self.notion_repository.get_documents_updated_since(
+            updated_docs = self.notion_repository.get_documents_updated_since(
                 start_time
             )
             if not updated_docs:
