@@ -8,6 +8,7 @@ from src.domain.notion.repositories import SQLNotionRepository
 from src.application.notion.notion_service import NotionService
 from src.application.discord.discord_service import DiscordService
 from src.scripts.init_db import init_db
+from src.utils.logging import logger
 
 
 def setup_discord_service(
@@ -47,7 +48,9 @@ def setup_discord_service(
 async def main():
     try:
         settings = load_environment()
+        logger.info("Initializing database...")
         init_db()
+        logger.info("Database initialized successfully")
 
         discord_service, discord_client = setup_discord_service(settings)
 
@@ -57,7 +60,7 @@ async def main():
         await asyncio.Future()
 
     except Exception as e:
-        print(f"Fatal error: {e}")
+        logger.error(f"Fatal error: {e}")
         raise
 
 
