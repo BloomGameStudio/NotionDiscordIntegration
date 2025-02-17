@@ -6,7 +6,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 def get_database_url():
     """Get database URL from environment variables"""
     if os.getenv("DATABASE_URL"):
-        return os.getenv("DATABASE_URL")
+        db_url = os.getenv("DATABASE_URL")
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        return db_url
 
     DB_USER = os.getenv("DB_USER", "notion_bot")
     DB_NAME = os.getenv("DB_NAME", "notion_bot")
@@ -22,7 +25,7 @@ def get_database_url():
 Base = declarative_base()
 
 engine = create_engine(
-    "postgresql+psycopg2://notion_bot:notion_bot@localhost:5432/notion_bot",
+    get_database_url(),
     echo=False,
 )
 
