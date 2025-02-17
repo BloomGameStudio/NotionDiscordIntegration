@@ -19,40 +19,20 @@ def get_database_url():
     return f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
 
 
-# Create engine
-engine = None
-if os.getenv("ENV") != "TEST":
-    url = get_database_url().replace("postgres://", "postgresql+psycopg2://", 1)
-
-    print("Attempting to connect to the database...")
-
-    engine = create_engine(
-        url,
-        pool_size=5,
-        max_overflow=10,
-        pool_timeout=30,
-        pool_recycle=1800,
-        echo=True,
-    )
-
 Base = declarative_base()
+
+engine = create_engine(
+    "postgresql+psycopg2://notion_bot:notion_bot@localhost:5432/notion_bot",
+    echo=False,
+)
+
+SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
 
 
 def create_session():
-    """Create database session"""
-    if engine is None:
-        raise RuntimeError("Database engine not initialized")
-    return sessionmaker(engine, class_=Session, expire_on_commit=False)
-
-
-def verify_database():
-    """Verify database connection"""
-    if engine is None:
-        return
-
+    """Create a new database session with automatic cleanup."""
+    session = SessionLocal()
     try:
-        with engine.connect() as conn:
-            conn.execute("SELECT 1")
-        print("Successfully connected to the database!")
-    except Exception as e:
-        print(f"Failed to connect to database: {e}")
+        return session
+    finally:
+        session.close()
