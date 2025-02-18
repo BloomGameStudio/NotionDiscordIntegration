@@ -15,16 +15,10 @@ def clear_database():
             # Get all table names
             tables = Base.metadata.sorted_tables
 
-            # Disable trigger constraints temporarily
-            conn.execute(text("SET session_replication_role = 'replica';"))
-
             # Truncate all tables in a single transaction
             for table in tables:
                 logger.info(f"Clearing table: {table.name}")
                 conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE;"))
-
-            # Re-enable trigger constraints
-            conn.execute(text("SET session_replication_role = 'origin';"))
 
         logger.info("Database cleared successfully")
     except Exception as e:

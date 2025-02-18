@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from sqlalchemy import create_engine, select, Table
+from sqlalchemy.orm import sessionmaker, Session
 from src.infrastructure.database.models import (
     Base,
     NotionDocumentModel,
@@ -18,7 +19,9 @@ def migrate_tables(source_url: str, target_session_factory=None):
 
     # Create source engine and session
     source_engine = create_engine(source_url)
-    source_session_factory = create_session(engine=source_engine)
+    source_session_factory = sessionmaker(
+        source_engine, class_=Session, expire_on_commit=False
+    )
 
     try:
         with source_session_factory() as source_session, target_session_factory() as target_session:

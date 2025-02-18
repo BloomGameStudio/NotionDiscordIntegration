@@ -73,8 +73,13 @@ def migrate_data(data=None, session_factory=None):
                         )
 
             for user_id, name, avatar_url in users:
-                user = NotionUserModel(id=user_id, name=name, avatar_url=avatar_url)
-                session.add(user)
+                try:
+                    user = NotionUserModel(id=user_id, name=name, avatar_url=avatar_url)
+                    session.add(user)
+                except Exception as e:
+                    # Skip if user already exists
+                    session.rollback()
+                    continue
 
             document_versions = {}
             for page in data:
