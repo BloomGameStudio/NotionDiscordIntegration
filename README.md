@@ -2,6 +2,14 @@
 
 A Discord bot that integrates with Notion for updates and notifications.
 
+<div align="center">
+
+![Python](https://img.shields.io/badge/python-3.11-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://docs.docker.com/compose/install/)
+
+</div>
+
 ## Setup
 Make copy of the environment variables file and fill in appropriate values:
 ```bash
