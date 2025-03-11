@@ -10,11 +10,9 @@ from src.infrastructure.config.database import get_database_url
 class Settings:
     """Application settings loaded from environment variables and constants"""
 
+    DATABASE_URL: str
     NOTION_TOKEN: str
     DISCORD_BOT_TOKEN: str
-
-    DATABASE_URL: str
-
     NOTION_DATABASE_ID: str
     NOTION_NOTIFICATION_CHANNELS: List[int]
 
@@ -25,17 +23,13 @@ class Settings:
     def __init__(self):
         load_dotenv()
 
+        self.DATABASE_URL = get_database_url()
         self.NOTION_TOKEN = os.getenv("NOTION_TOKEN")
         self.DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-        self.DATABASE_URL = get_database_url()
-        self.NOTION_DATABASE_ID = os.getenv(
-            "NOTION_DATABASE_ID", "07752fd5ba8e44c7b8e48bfee50f0545"
-        )
-
-        channels_str = os.getenv("NOTION_NOTIFICATION_CHANNELS", "")
+        self.NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
         self.NOTION_NOTIFICATION_CHANNELS = [
             int(channel.strip())
-            for channel in channels_str.split(",")
+            for channel in os.getenv("NOTION_NOTIFICATION_CHANNELS", "").split(",")
             if channel.strip()
         ] or NOTION_NOTIFICATION_CHANNELS
 
@@ -70,4 +64,4 @@ def validate_settings(settings: Settings) -> None:
     if not settings.NOTION_DATABASE_ID:
         raise ValueError("NOTION_DATABASE_ID is required")
     if not settings.NOTION_NOTIFICATION_CHANNELS:
-        raise ValueError("At least one notification channel is required")
+        raise ValueError("At least one NOTION_NOTIFICATION_CHANNELS value is required")
