@@ -1,130 +1,56 @@
-# NotionDiscordIntegration
+<div align="center">
+
+![Python](https://img.shields.io/badge/python-3.11-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://docs.docker.com/compose/install/)
+
+</div>
+
+# Notion/Discord Integration
 
 A Discord bot that integrates with Notion for updates and notifications.
 
 ## Setup
+Make copy of the environment variables file and fill in appropriate values:
+```bash
+cp .env.example .env
+```
 
-1. Clone the repository or copy the necessary files:
-   ```bash
-   git clone https://github.com/BloomGameStudio/NotionDiscordIntegration.git
-   ```
+## Run
 
-2. Create and configure the environment variables:
-   - Copy `.env.example` to `.env`
-   - Fill in the required values:
-     ```
-     DISCORD_BOT_TOKEN=your_discord_bot_token
-     NOTION_TOKEN=your_notion_token
-     DB_PASSWORD=your_database_password
-     NOTION_DATABASE_ID=your_notion_database_id
-     NOTION_NOTIFICATION_CHANNELS=channel_id1,channel_id2
-     ```
-
-## Deployment Options
-
-### Docker (Recommended for Production)
-
-1. Make sure Docker and Docker Compose are installed on your system
-
+### Docker (recommended)
+1. Ensure [Docker](https://docs.docker.com/compose/install/) is installed.
 2. Start the containers:
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+docker compose up
+```
 
-3. Check the logs:
-   ```bash
-   docker-compose logs -f bot
-   ```
+### Local Heroku
 
-### Heroku
+1. Ensure [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli) is installed.
+2. Install dependencies:
+```bash
+pipenv install --dev
+```
+3. Run the bot:
+```bash
+heroku local
+```
 
-1. Install the Heroku CLI and login:
-   ```bash
-   heroku login
-   ```
+## Run Scripts
+**Double check your environment variables are set to target the correct database.**
 
-2. Create a new Heroku app:
-   ```bash
-   heroku create your-app-name
-   ```
+Activate the virtual environment:
+```bash
+pipenv shell
+```
 
-3. Add the Heroku Postgres addon:
-   ```bash
-   heroku addons:create heroku-postgresql:mini
-   ```
+### Initialize database
+```bash
+python -m src.scripts.init_db
+```
 
-4. Configure environment variables:
-   ```bash
-   heroku config:set DISCORD_BOT_TOKEN=your_discord_bot_token
-   heroku config:set NOTION_TOKEN=your_notion_token
-   heroku config:set NOTION_DATABASE_ID=your_notion_database_id
-   heroku config:set NOTION_NOTIFICATION_CHANNELS=channel_id1,channel_id2
-   ```
-
-5. Deploy to Heroku:
-   ```bash
-   git push heroku main
-   ```
-
-6. Ensure the worker is running:
-   ```bash
-   heroku ps:scale worker=1
-   ```
-
-### Local Development
-
-1. Install dependencies:
-   ```bash
-   pip install pipenv
-   pipenv install --dev
-   ```
-
-2. Run the bot:
-   ```bash
-   heroku local
-   ```
-
-## Environment Variables
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `DISCORD_BOT_TOKEN` | Discord Bot Token | Yes | - |
-| `NOTION_TOKEN` | Notion Integration Token | Yes | - |
-| `DB_PASSWORD` | Database Password | Yes | - |
-| `NOTION_DATABASE_ID` | Notion Database ID | No | Default in settings |
-| `NOTION_NOTIFICATION_CHANNELS` | Discord Channel IDs | No | Default in constants |
-| `DATABASE_URL` | Full Database URL | No | Constructed from other vars |
-
-## Database Migrations
-
-### Migrating Data to Heroku
-
-If you need to migrate existing data to a new Heroku deployment:
-
-1. Ensure your local Postgres database is running:
-   ```bash
-   docker-compose up -d db
-   ```
-
-2. Verify your environment variables are set:
-   ```bash
-   # Local database connection
-   export DATABASE_URL=postgresql://notion_bot:your_local_password@localhost:5432/notion_bot
-   ```
-
-3. Run the migration script:
-   ```bash
-   # Activate the virtual environment
-   pipenv shell
-   
-   # Run the migration
-   python -m src.scripts.migrate
-   ```
-
-4. Verify the migration:
-   ```bash
-   python -m src.scripts.query
-   ```
-## License
-
-[MIT License](LICENSE)
+### Run query
+```bash
+python -m src.scripts.query
+```
