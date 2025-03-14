@@ -31,11 +31,8 @@ def setup_discord_service(
         check_interval=settings.UPDATE_INTERVAL,
     )
 
-    intents = discord.Intents.default()
-    intents.message_content = True
-
     discord_client = DiscordClient(
-        discord_service=discord_service, settings=settings, intents=intents
+        discord_service=discord_service, settings=settings, intents=discord.Intents.default()
     )
 
     return discord_service, discord_client
