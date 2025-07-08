@@ -137,6 +137,29 @@ class NotionService:
                                 channels=self.notification_channels,
                             )
                         )
+                else:
+                    # Document doesn't exist in database
+                    # Check if it's a recent edit (within last 24 hours)
+                    time_since_edit = (current_time - doc.last_edited_time).total_seconds()
+                    if time_since_edit < 86400:  # 24 hours in seconds
+                        logger.info(f"New document detected: {title} (edited {time_since_edit/3600:.1f} hours ago)")
+                        created_by = await self._get_user_safely(doc.created_by.id)
+                        self.notion_repository.save_document(doc)
+                        
+                        self._last_update_times[doc.id] = current_time
+                        
+                        notifications.append(
+                            NotificationMessage(
+                                title=MESSAGE_TEMPLATES["creation"].format(doc.title),
+                                content=self._format_creation_message(doc, created_by),
+                                timestamp=doc.created_time,
+                                channels=self.notification_channels,
+                            )
+                        )
+                    else:
+                        logger.info(f"Skipping old document not in database: {title} (edited {time_since_edit/3600:.1f} hours ago)")
+                        # Save to database to prevent future notifications
+                        self.notion_repository.save_document(doc)
 
             logger.info(f"Created {len(notifications)} update notifications")
             return notifications
