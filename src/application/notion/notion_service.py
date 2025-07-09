@@ -80,6 +80,7 @@ class NotionService:
             current_time = datetime.now(timezone.utc)
 
             for doc in documents:
+                # Normalize title to string for both doc and existing_doc
                 title = (
                     doc.title[0]["plain_text"]
                     if isinstance(doc.title, list)
@@ -98,14 +99,31 @@ class NotionService:
 
                 existing_doc = self.notion_repository.get_document(doc.id)
                 if existing_doc:
+                    # Normalize existing_doc title
+                    existing_title = (
+                        existing_doc.title[0]["plain_text"]
+                        if isinstance(existing_doc.title, list)
+                        else existing_doc.title
+                    )
+                    # Normalize properties to dict for both
+                    doc_properties = dict(doc.properties) if doc.properties else {}
+                    existing_properties = dict(existing_doc.properties) if existing_doc.properties else {}
+
                     has_changes = (
-                        doc.title != existing_doc.title
+                        doc.title != existing_title
                         or doc.last_edited_time > existing_doc.last_edited_time
-                        or doc.properties != existing_doc.properties
+                        or doc_properties != existing_properties
                     )
 
                     if has_changes:
                         logger.info(f"Update detected for document: {title}")
+                        logger.info(f"Comparison details for doc.id={doc.id}:\n"
+                                    f"  doc.title: {doc.title}\n"
+                                    f"  existing_doc.title: {existing_title}\n"
+                                    f"  doc.last_edited_time: {doc.last_edited_time}\n"
+                                    f"  existing_doc.last_edited_time: {existing_doc.last_edited_time}\n"
+                                    f"  doc.properties: {doc_properties}\n"
+                                    f"  existing_doc.properties: {existing_properties}")
                         edited_by = await self._get_user_safely(doc.last_edited_by.id)
                         self.notion_repository.save_document(doc)
 
@@ -119,6 +137,29 @@ class NotionService:
                                 channels=self.notification_channels,
                             )
                         )
+                else:
+                    # Document doesn't exist in database
+                    # Check if it's a recent edit (within last 24 hours)
+                    time_since_edit = (current_time - doc.last_edited_time).total_seconds()
+                    if time_since_edit < 86400:  # 24 hours in seconds
+                        logger.info(f"New document detected: {title} (edited {time_since_edit/3600:.1f} hours ago)")
+                        created_by = await self._get_user_safely(doc.created_by.id)
+                        self.notion_repository.save_document(doc)
+                        
+                        self._last_update_times[doc.id] = current_time
+                        
+                        notifications.append(
+                            NotificationMessage(
+                                title=MESSAGE_TEMPLATES["creation"].format(doc.title),
+                                content=self._format_creation_message(doc, created_by),
+                                timestamp=doc.created_time,
+                                channels=self.notification_channels,
+                            )
+                        )
+                    else:
+                        logger.info(f"Skipping old document not in database: {title} (edited {time_since_edit/3600:.1f} hours ago)")
+                        # Save to database to prevent future notifications
+                        self.notion_repository.save_document(doc)
 
             logger.info(f"Created {len(notifications)} update notifications")
             return notifications
