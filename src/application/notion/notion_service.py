@@ -74,6 +74,7 @@ class NotionService:
     async def handle_updates(self) -> List[NotificationMessage]:
         """Handle notifications for updated documents"""
         try:
+            logger.info("=== NEW CODE IS RUNNING - handle_updates method ===")
             documents = await self.notion_client.get_updated_documents()
             logger.info(f"Processing {len(documents)} potential updates")
             notifications = []
@@ -88,6 +89,8 @@ class NotionService:
                 )
                 doc.title = title
 
+                logger.debug(f"Processing document: {title} (ID: {doc.id})")
+
                 if doc.id in self._last_update_times:
                     last_update = self._last_update_times[doc.id]
                     time_since_last_update = (
@@ -99,6 +102,7 @@ class NotionService:
 
                 existing_doc = self.notion_repository.get_document(doc.id)
                 if existing_doc:
+                    logger.debug(f"Document {title} exists in database")
                     # Normalize existing_doc title
                     existing_title = (
                         existing_doc.title[0]["plain_text"]
@@ -137,7 +141,10 @@ class NotionService:
                                 channels=self.notification_channels,
                             )
                         )
+                    else:
+                        logger.debug(f"No changes detected for document: {title}")
                 else:
+                    logger.debug(f"Document {title} NOT found in database")
                     # Document doesn't exist in database
                     # Check if it's a recent edit (within last 24 hours)
                     time_since_edit = (current_time - doc.last_edited_time).total_seconds()
