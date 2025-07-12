@@ -89,20 +89,19 @@ class NotionService:
                 )
                 doc.title = title
 
-                logger.debug(f"Processing document: {title} (ID: {doc.id})")
-
-                if doc.id in self._last_update_times:
-                    last_update = self._last_update_times[doc.id]
-                    time_since_last_update = (
-                        current_time - last_update
-                    ).total_seconds()
-                    if time_since_last_update < self.update_cooldown:
-                        logger.debug(f"Skipping update for {title} due to cooldown")
-                        continue
-
                 existing_doc = self.notion_repository.get_document(doc.id)
                 if existing_doc:
-                    logger.debug(f"Document {title} exists in database")
+                    # Only apply cooldown to documents that exist in database
+                    if doc.id in self._last_update_times:
+                        last_update = self._last_update_times[doc.id]
+                        time_since_last_update = (
+                            current_time - last_update
+                        ).total_seconds()
+                        if time_since_last_update < self.update_cooldown:
+                            logger.info(f"Skipping update for {title} due to cooldown")
+                            continue
+                    
+                    logger.info(f"Document {title} exists in database")
                     # Normalize existing_doc title
                     existing_title = (
                         existing_doc.title[0]["plain_text"]
@@ -121,13 +120,6 @@ class NotionService:
 
                     if has_changes:
                         logger.info(f"Update detected for document: {title}")
-                        logger.info(f"Comparison details for doc.id={doc.id}:\n"
-                                    f"  doc.title: {doc.title}\n"
-                                    f"  existing_doc.title: {existing_title}\n"
-                                    f"  doc.last_edited_time: {doc.last_edited_time}\n"
-                                    f"  existing_doc.last_edited_time: {existing_doc.last_edited_time}\n"
-                                    f"  doc.properties: {doc_properties}\n"
-                                    f"  existing_doc.properties: {existing_properties}")
                         edited_by = await self._get_user_safely(doc.last_edited_by.id)
                         self.notion_repository.save_document(doc)
 
@@ -142,9 +134,9 @@ class NotionService:
                             )
                         )
                     else:
-                        logger.debug(f"No changes detected for document: {title}")
+                        logger.info(f"No changes detected for document: {title}")
                 else:
-                    logger.debug(f"Document {title} NOT found in database")
+                    logger.info(f"Document {title} NOT found in database")
                     # Document doesn't exist in database
                     # Check if it's a recent edit (within last 24 hours)
                     time_since_edit = (current_time - doc.last_edited_time).total_seconds()
