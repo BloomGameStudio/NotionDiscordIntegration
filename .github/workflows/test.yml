@@ -1,0 +1,53 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: notion_bot
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: notion_bot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install pipenv
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+
+      - name: Install dependencies
+        run: |
+          pipenv install --dev
+
+      - name: Run tests
+        env:
+          DB_PASSWORD: test_password
+          DATABASE_URL: postgresql+psycopg2://notion_bot:test_password@localhost:5432/notion_bot_test
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          pipenv run pytest tests/ -v

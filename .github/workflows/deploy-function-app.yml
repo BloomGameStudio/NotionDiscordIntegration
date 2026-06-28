@@ -1,0 +1,88 @@
+name: Deploy Azure Function App
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'staging') }}
+    env:
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'staging') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Cache Local Terraform State
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/terraform/terraform-${{ env.DEPLOY_ENV }}.tfstate
+            infra/terraform/terraform-${{ env.DEPLOY_ENV }}.tfstate.backup
+          key: terraform-state-${{ env.DEPLOY_ENV }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: |
+          terraform init \
+            -backend-config="path=terraform-${{ env.DEPLOY_ENV }}.tfstate"
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        env:
+          TF_VAR_environment: ${{ env.DEPLOY_ENV }}
+          TF_VAR_notion_token: ${{ secrets.NOTION_TOKEN }}
+          TF_VAR_notion_database_id: ${{ secrets.NOTION_DATABASE_ID }}
+          TF_VAR_discord_bot_token: ${{ secrets.DISCORD_BOT_TOKEN }}
+          TF_VAR_notion_notification_channels: ${{ secrets.NOTION_NOTIFICATION_CHANNELS }}
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+          TF_VAR_sync_cron: ${{ vars.SYNC_CRON != '' && vars.SYNC_CRON || '0 0 */4 * * *' }}
+        run: |
+          terraform apply -auto-approve
+
+      - name: Read Function App Name
+        id: tf
+        working-directory: infra/terraform
+        run: |
+          echo "function_app_name=$(terraform output -raw function_app_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Deploy Function Code
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.tf.outputs.function_app_name }}
+          package: .

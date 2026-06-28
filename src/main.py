@@ -1,52 +1,54 @@
 import asyncio
-import discord
-from src.infrastructure.config.database import engine, create_session
+from src.infrastructure.config.database import create_session
 from src.infrastructure.config.settings import load_environment, Settings
 from src.infrastructure.notion_client.client import NotionClient
-from src.infrastructure.discord_client.client import DiscordClient
+from src.infrastructure.discord_client.rest_client import DiscordRestClient
 from src.domain.notion.repositories import SQLNotionRepository
 from src.application.notion.notion_service import NotionService
-from src.application.discord.discord_service import DiscordService
 from src.utils.logging import logger
 
 
-def setup_discord_service(
-    settings: Settings, session_factory
-) -> tuple[DiscordService, DiscordClient]:
-    """Setup Discord service and client"""
-
+def setup_notion_service(settings: Settings, session_factory) -> NotionService:
     notion_client = NotionClient(settings.NOTION_TOKEN, settings.NOTION_DATABASE_ID)
     notion_repository = SQLNotionRepository(session_factory)
 
-    notion_service = NotionService(
+    return NotionService(
         notion_client=notion_client,
         notion_repository=notion_repository,
         notification_channels=settings.NOTION_NOTIFICATION_CHANNELS,
         update_cooldown=settings.UPDATE_COOLDOWN,
     )
 
-    discord_service = DiscordService(
-        notion_service=notion_service,
-        settings=settings,
-        check_interval=settings.UPDATE_INTERVAL,
-    )
 
-    discord_client = DiscordClient(
-        discord_service=discord_service, settings=settings, intents=discord.Intents.default()
-    )
+async def run_scheduled_sync(settings: Settings, session_factory) -> None:
+    """Run exactly one sync cycle for serverless/cron execution."""
+    notion_service = setup_notion_service(settings, session_factory)
 
-    return discord_service, discord_client
+    creation_notifications = await notion_service.handle_creations()
+    update_notifications = await notion_service.handle_updates()
+    notifications = creation_notifications + update_notifications
+
+    if not notifications:
+        logger.info("Scheduled sync completed: no new notifications")
+        return
+
+    async with DiscordRestClient(settings.DISCORD_BOT_TOKEN) as discord_client:
+        for notification in notifications:
+            message = f"**{notification.title}**\n{notification.content}"
+            for channel_id in notification.channels:
+                await discord_client.send_message(channel_id, message)
+
+    logger.info(
+        "Scheduled sync completed: sent %s notifications", len(notifications)
+    )
 
 
 async def main():
-    """Main entry point"""
+    """Main entry point for one-shot scheduled sync."""
     try:
         settings = load_environment()
         session = create_session()
-
-        discord_service, discord_client = setup_discord_service(settings, session)
-
-        await discord_client.start(settings.DISCORD_BOT_TOKEN)
+        await run_scheduled_sync(settings, session)
 
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)

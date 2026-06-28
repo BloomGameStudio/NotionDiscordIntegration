@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 discord-py = "*"
+aiohttp = "*"
+azure-functions = "*"
 sqlalchemy = "*"
 python-dotenv = "*"
 notion-client = "*"

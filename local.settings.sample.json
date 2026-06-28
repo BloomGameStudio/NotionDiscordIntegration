@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "SYNC_CRON": "0 0 */4 * * *",
+    "NOTION_TOKEN": "",
+    "NOTION_DATABASE_ID": "",
+    "DISCORD_BOT_TOKEN": "",
+    "NOTION_NOTIFICATION_CHANNELS": "",
+    "DATABASE_URL": ""
+  }
+}

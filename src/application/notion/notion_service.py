@@ -74,7 +74,6 @@ class NotionService:
     async def handle_updates(self) -> List[NotificationMessage]:
         """Handle notifications for updated documents"""
         try:
-            logger.info("=== NEW CODE IS RUNNING - handle_updates method ===")
             documents = await self.notion_client.get_updated_documents()
             logger.info(f"Processing {len(documents)} potential updates")
             notifications = []
@@ -102,21 +101,7 @@ class NotionService:
                             continue
                     
                     logger.info(f"Document {title} exists in database")
-                    # Normalize existing_doc title
-                    existing_title = (
-                        existing_doc.title[0]["plain_text"]
-                        if isinstance(existing_doc.title, list)
-                        else existing_doc.title
-                    )
-                    # Normalize properties to dict for both
-                    doc_properties = dict(doc.properties) if doc.properties else {}
-                    existing_properties = dict(existing_doc.properties) if existing_doc.properties else {}
-
-                    has_changes = (
-                        doc.title != existing_title
-                        or doc.last_edited_time > existing_doc.last_edited_time
-                        or doc_properties != existing_properties
-                    )
+                    has_changes = doc.last_edited_time > existing_doc.last_edited_time
 
                     if has_changes:
                         logger.info(f"Update detected for document: {title}")

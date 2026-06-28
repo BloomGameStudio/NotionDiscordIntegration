@@ -1,0 +1,7 @@
+azure-functions
+discord-py
+aiohttp
+sqlalchemy
+python-dotenv
+notion-client
+psycopg2-binary
