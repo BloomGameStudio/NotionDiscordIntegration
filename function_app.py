@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 import azure.functions as func
 
-from src.infrastructure.config.database import create_session
 from src.infrastructure.config.settings import load_environment
 from src.main import run_scheduled_sync
 from src.utils.logging import logger
@@ -28,8 +27,7 @@ def notion_discord_sync(timer: func.TimerRequest) -> None:
 
     try:
         settings = load_environment()
-        session_factory = create_session()
-        asyncio.run(run_scheduled_sync(settings, session_factory))
+        asyncio.run(run_scheduled_sync(settings))
     except Exception as exc:
         logger.error("Scheduled sync failed: %s", exc, exc_info=True)
         raise

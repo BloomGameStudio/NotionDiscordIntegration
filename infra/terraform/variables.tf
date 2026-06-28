@@ -1,11 +1,11 @@
 variable "environment" {
   description = "Deployment environment"
   type        = string
-  default     = "dev"
+  default     = "staging"
 
   validation {
-    condition     = contains(["dev", "prod"], var.environment)
-    error_message = "environment must be one of: dev, prod"
+    condition     = contains(["staging", "prod"], var.environment)
+    error_message = "environment must be one of: staging, prod"
   }
 }
 
@@ -57,9 +57,9 @@ variable "notion_notification_channels" {
   type = string
 }
 
-variable "database_url" {
-  type      = string
-  sensitive = true
+variable "storage_table_name" {
+  type    = string
+  default = "notionDocuments"
 }
 
 variable "tags" {

@@ -8,6 +8,6 @@
     "NOTION_DATABASE_ID": "",
     "DISCORD_BOT_TOKEN": "",
     "NOTION_NOTIFICATION_CHANNELS": "",
-    "DATABASE_URL": ""
+    "STORAGE_TABLE_NAME": "notionDocuments"
   }
 }

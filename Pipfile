@@ -7,14 +7,15 @@ name = "pypi"
 discord-py = "*"
 aiohttp = "*"
 azure-functions = "*"
-sqlalchemy = "*"
+azure-data-tables = "*"
 python-dotenv = "*"
 notion-client = "*"
-psycopg2-binary = "*"
 
 [dev-packages]
 black = "*"
 flake8 = "*"
+pytest = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.11"

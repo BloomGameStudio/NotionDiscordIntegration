@@ -1,7 +1,6 @@
 azure-functions
+azure-data-tables
 discord-py
 aiohttp
-sqlalchemy
 python-dotenv
 notion-client
-psycopg2-binary

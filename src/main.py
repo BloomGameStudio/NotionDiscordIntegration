@@ -1,16 +1,18 @@
 import asyncio
-from src.infrastructure.config.database import create_session
 from src.infrastructure.config.settings import load_environment, Settings
 from src.infrastructure.notion_client.client import NotionClient
 from src.infrastructure.discord_client.rest_client import DiscordRestClient
-from src.domain.notion.repositories import SQLNotionRepository
+from src.domain.notion.repositories import TableStorageNotionRepository
 from src.application.notion.notion_service import NotionService
 from src.utils.logging import logger
 
 
-def setup_notion_service(settings: Settings, session_factory) -> NotionService:
+def setup_notion_service(settings: Settings) -> NotionService:
     notion_client = NotionClient(settings.NOTION_TOKEN, settings.NOTION_DATABASE_ID)
-    notion_repository = SQLNotionRepository(session_factory)
+    notion_repository = TableStorageNotionRepository(
+        settings.STORAGE_CONNECTION_STRING,
+        settings.STORAGE_TABLE_NAME,
+    )
 
     return NotionService(
         notion_client=notion_client,
@@ -20,9 +22,9 @@ def setup_notion_service(settings: Settings, session_factory) -> NotionService:
     )
 
 
-async def run_scheduled_sync(settings: Settings, session_factory) -> None:
+async def run_scheduled_sync(settings: Settings) -> None:
     """Run exactly one sync cycle for serverless/cron execution."""
-    notion_service = setup_notion_service(settings, session_factory)
+    notion_service = setup_notion_service(settings)
 
     creation_notifications = await notion_service.handle_creations()
     update_notifications = await notion_service.handle_updates()
@@ -47,8 +49,7 @@ async def main():
     """Main entry point for one-shot scheduled sync."""
     try:
         settings = load_environment()
-        session = create_session()
-        await run_scheduled_sync(settings, session)
+        await run_scheduled_sync(settings)
 
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)

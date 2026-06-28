@@ -23,8 +23,12 @@ Set `SYNC_CRON` in Function App settings. The default is every 4 hours:
 - `NOTION_DATABASE_ID`
 - `DISCORD_BOT_TOKEN`
 - `NOTION_NOTIFICATION_CHANNELS`
-- `DATABASE_URL`
 - `SYNC_CRON`
+- `AzureWebJobsStorage`
+
+Persistence (storage-backed):
+
+- Optional: `STORAGE_TABLE_NAME` (defaults to `notionDocuments`)
 
 For local development, copy `local.settings.sample.json` to `local.settings.json` and fill in values.
 
@@ -40,7 +44,6 @@ Each environment provisions:
 - Resource Group
 - Storage Account
 - App Service Plan (Y1 / Consumption)
-- Application Insights
 - Linux Function App (Python 3.11)
 
 ### Naming Convention
@@ -81,7 +84,7 @@ export TF_VAR_notion_token="..."
 export TF_VAR_notion_database_id="..."
 export TF_VAR_discord_bot_token="..."
 export TF_VAR_notion_notification_channels="1234567890"
-export TF_VAR_database_url="..."
+export TF_VAR_storage_table_name="notionDocuments"
 export TF_VAR_sync_cron="0 0 */4 * * *"
 
 terraform -chdir=infra/terraform apply
@@ -104,11 +107,11 @@ Create GitHub Environments named `dev` and `prd` and configure these environment
 - `NOTION_DATABASE_ID`
 - `DISCORD_BOT_TOKEN`
 - `NOTION_NOTIFICATION_CHANNELS`
-- `DATABASE_URL`
 
 Optional environment variable:
 
 - `SYNC_CRON` (GitHub Environment variable, defaults to `0 0 */4 * * *` if unset)
+- `STORAGE_TABLE_NAME` (GitHub Environment variable, defaults to `notionDocuments` if unset)
 
 ## Setup
 Make copy of the environment variables file and fill in appropriate values:
@@ -134,19 +137,9 @@ func start
 ```
 
 ## Run Scripts
-**Double check your environment variables are set to target the correct database.**
+**Double check your environment variables are set to target the correct storage account.**
 
 Activate the virtual environment:
 ```bash
 pipenv shell
-```
-
-### Initialize database
-```bash
-python -m src.scripts.init_db
-```
-
-### Run query
-```bash
-python -m src.scripts.query
 ```

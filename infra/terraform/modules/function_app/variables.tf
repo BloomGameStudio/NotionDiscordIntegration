@@ -51,10 +51,10 @@ variable "notion_notification_channels" {
   type        = string
 }
 
-variable "database_url" {
-  description = "Database connection URL"
+variable "storage_table_name" {
+  description = "Azure Table Storage table name used for persistence"
   type        = string
-  sensitive   = true
+  default     = "notionDocuments"
 }
 
 variable "tags" {

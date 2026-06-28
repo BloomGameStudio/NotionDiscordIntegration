@@ -37,15 +37,6 @@ resource "azurerm_service_plan" "this" {
   tags = var.tags
 }
 
-resource "azurerm_application_insights" "this" {
-  name                = "${var.project_name}-${var.environment}-appi"
-  location            = azurerm_resource_group.this.location
-  resource_group_name = azurerm_resource_group.this.name
-  application_type    = "web"
-
-  tags = var.tags
-}
-
 resource "azurerm_linux_function_app" "this" {
   name                = var.function_app_name
   location            = azurerm_resource_group.this.location
@@ -59,9 +50,6 @@ resource "azurerm_linux_function_app" "this" {
   https_only                  = true
 
   site_config {
-    application_insights_connection_string = azurerm_application_insights.this.connection_string
-    application_insights_key               = azurerm_application_insights.this.instrumentation_key
-
     application_stack {
       python_version = "3.11"
     }
@@ -76,9 +64,7 @@ resource "azurerm_linux_function_app" "this" {
     NOTION_DATABASE_ID                    = var.notion_database_id
     DISCORD_BOT_TOKEN                     = var.discord_bot_token
     NOTION_NOTIFICATION_CHANNELS          = var.notion_notification_channels
-    DATABASE_URL                          = var.database_url
-    APPINSIGHTS_INSTRUMENTATIONKEY        = azurerm_application_insights.this.instrumentation_key
-    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.this.connection_string
+    STORAGE_TABLE_NAME                    = var.storage_table_name
   }
 
   identity {

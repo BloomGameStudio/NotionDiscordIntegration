@@ -75,7 +75,7 @@ jobs:
           TF_VAR_notion_database_id: ${{ secrets.NOTION_DATABASE_ID }}
           TF_VAR_discord_bot_token: ${{ secrets.DISCORD_BOT_TOKEN }}
           TF_VAR_notion_notification_channels: ${{ secrets.NOTION_NOTIFICATION_CHANNELS }}
-          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+          TF_VAR_storage_table_name: ${{ vars.STORAGE_TABLE_NAME != '' && vars.STORAGE_TABLE_NAME || 'notionDocuments' }}
           TF_VAR_sync_cron: ${{ vars.SYNC_CRON != '' && vars.SYNC_CRON || '0 0 */4 * * *' }}
         run: |
           terraform apply -auto-approve
