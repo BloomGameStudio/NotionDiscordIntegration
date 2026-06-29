@@ -2,15 +2,15 @@ from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
 from typing import List
-from .constants import COLLECTIVE_DB, NOTION_NOTIFICATION_CHANNELS
-from src.infrastructure.config.database import get_database_url
+from .constants import NOTION_NOTIFICATION_CHANNELS
 
 
 @dataclass
 class Settings:
     """Application settings loaded from environment variables and constants"""
 
-    DATABASE_URL: str
+    STORAGE_CONNECTION_STRING: str
+    STORAGE_TABLE_NAME: str
     NOTION_TOKEN: str
     DISCORD_BOT_TOKEN: str
     NOTION_DATABASE_ID: str
@@ -23,7 +23,11 @@ class Settings:
     def __init__(self):
         load_dotenv()
 
-        self.DATABASE_URL = get_database_url()
+        self.STORAGE_CONNECTION_STRING = os.getenv(
+            "STORAGE_CONNECTION_STRING",
+            os.getenv("AzureWebJobsStorage", ""),
+        )
+        self.STORAGE_TABLE_NAME = os.getenv("STORAGE_TABLE_NAME", "notionDocuments")
         self.NOTION_TOKEN = os.getenv("NOTION_TOKEN")
         self.DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
         self.NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
@@ -36,18 +40,7 @@ class Settings:
     @classmethod
     def load_from_env(cls) -> "Settings":
         """Load settings from environment variables"""
-        database_url = os.getenv(
-            "DATABASE_URL",
-            "postgresql://notion_bot:notion_bot@localhost:5432/notion_bot",
-        )
-
-        return cls(
-            NOTION_TOKEN=os.environ["NOTION_TOKEN"],
-            DISCORD_BOT_TOKEN=os.environ["DISCORD_BOT_TOKEN"],
-            DATABASE_URL=database_url,
-            NOTION_DATABASE_ID=COLLECTIVE_DB,
-            NOTION_NOTIFICATION_CHANNELS=NOTION_NOTIFICATION_CHANNELS,
-        )
+        return cls()
 
 
 def load_environment() -> Settings:
@@ -65,3 +58,7 @@ def validate_settings(settings: Settings) -> None:
         raise ValueError("NOTION_DATABASE_ID is required")
     if not settings.NOTION_NOTIFICATION_CHANNELS:
         raise ValueError("At least one NOTION_NOTIFICATION_CHANNELS value is required")
+    if not settings.STORAGE_CONNECTION_STRING:
+        raise ValueError(
+            "STORAGE_CONNECTION_STRING or AzureWebJobsStorage is required"
+        )
