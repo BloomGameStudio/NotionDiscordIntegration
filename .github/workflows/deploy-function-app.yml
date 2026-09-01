@@ -16,7 +16,6 @@ on:
           - prod
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -52,12 +51,13 @@ jobs:
             infra/terraform/terraform-${{ env.DEPLOY_ENV }}.tfstate.backup
           key: terraform-state-${{ env.DEPLOY_ENV }}
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Terraform Init
         if: steps.changes.outputs.infra == 'true'
